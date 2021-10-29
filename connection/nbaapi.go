@@ -1,11 +1,14 @@
 package connection
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
+	"os"
 	"time"
 )
 
@@ -104,18 +107,40 @@ func (pr *PlayerIndexResult) String() string {
 // Client holds the http connection.
 type Client struct {
 	httpClient *http.Client
+	useProxy   bool
 }
 
 // New creates a new Client object.
 func New(httpClient *http.Client) *Client {
+	useProxy := false
 	if httpClient == nil {
+		proxyHost := os.Getenv("PROXY_HOST")
+		proxyPort := os.Getenv("PROXY_PORT")
 		c := &http.Client{
 			Timeout: time.Second * 10,
+		}
+		if proxyHost != "" && proxyPort != "" {
+			proxyUser := os.Getenv("PROXY_USER")
+			proxyPass := os.Getenv("PROXY_PASS")
+			fmt.Printf("Using proxy. %s:%s\n", proxyHost, proxyPort)
+			httpProxyURL := &url.URL{
+				Scheme: "http",
+				Host:   proxyHost + ":" + proxyPort,
+			}
+			if proxyUser != "" && proxyPass != "" {
+				fmt.Println("Proxy user and pass provided.")
+				httpProxyURL.User = url.UserPassword(proxyUser, proxyPass)
+			}
+			c.Transport = &http.Transport{
+				Proxy: http.ProxyURL(httpProxyURL),
+			}
+			useProxy = true
 		}
 		httpClient = c
 	}
 	return &Client{
 		httpClient: httpClient,
+		useProxy:   useProxy,
 	}
 }
 
@@ -162,7 +187,7 @@ func (c *Client) GetPlayerIndex(season string) (map[string]*PlayerIndexResult, e
 		q.Add(qName, qValue)
 	}
 	req.URL.RawQuery = q.Encode()
-	setRequestHeaders(&req.Header)
+	c.setRequestHeaders(&req.Header)
 
 	resp, err := c.httpClient.Do(req)
 
@@ -282,7 +307,7 @@ func (c *Client) GetPlayerVideos(season string, gameID string, teamID string, pl
 		q.Add(qName, qValue)
 	}
 	req.URL.RawQuery = q.Encode()
-	setRequestHeaders(&req.Header)
+	c.setRequestHeaders(&req.Header)
 
 	resp, err := c.httpClient.Do(req)
 
@@ -340,7 +365,7 @@ func (c *Client) GetGames(date string) ([]*GameResult, error) {
 		q.Add(qName, qValue)
 	}
 	req.URL.RawQuery = q.Encode()
-	setRequestHeaders(&req.Header)
+	c.setRequestHeaders(&req.Header)
 
 	resp, err := c.httpClient.Do(req)
 
@@ -382,13 +407,19 @@ func (c *Client) GetGames(date string) ([]*GameResult, error) {
 	return results, nil
 }
 
-// Close closes the underlying http connection.
-func (c *Client) Close() {
-	c.httpClient.CloseIdleConnections()
+func (c *Client) setRequestAuthentication(header *http.Header) {
+	proxyUser := os.Getenv("PROXY_USER")
+	proxyPass := os.Getenv("PROXY_PASS")
+	if proxyUser != "" && proxyPass != "" {
+		fmt.Println("Proxy user and pass provided.")
+		//adding proxy authentication
+		auth := proxyUser + ":" + proxyPass
+		basicAuth := "Basic " + base64.StdEncoding.EncodeToString([]byte(auth))
+		header.Add("Proxy-Authorization", basicAuth)
+	}
 }
 
-func setRequestHeaders(header *http.Header) {
-	header.Set("name", "value")
+func (c *Client) setRequestHeaders(header *http.Header) {
 	header.Set("Accept", "application/json, text/plain, */*")
 	header.Set("x-nba-stats-token", "true")
 	// header.Set("sec-ch-ua-mobile", "?0")
@@ -402,4 +433,12 @@ func setRequestHeaders(header *http.Header) {
 	header.Set("Referer", "https://www.nba.com/")
 	header.Set("Accept-Language", "en-US,en;q=0.9")
 	// header.Set("If-Modified-Since", "Thu, 28 Oct 2021 06:32:33 GMT")
+	// if c.useProxy {
+	// 	c.setRequestAuthentication(header)
+	// }
+}
+
+// Close closes the underlying http connection.
+func (c *Client) Close() {
+	c.httpClient.CloseIdleConnections()
 }
