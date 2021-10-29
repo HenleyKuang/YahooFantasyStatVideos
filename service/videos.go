@@ -27,12 +27,12 @@ func GetVideos(nbaClient *connection.Client, playerName string, teamAbbreviation
 	teamID := playerResults[key].TeamID
 	var gameID string
 
-	gameResults, _ := nbaClient.GetGames("2021-10-29")
+	gameResults, _ := nbaClient.GetGames(date)
 	for _, gameResult := range gameResults {
 		if gameResult.AwayTeamID == teamID || gameResult.HomeTeamID == teamID {
 			gameID = gameResult.GameID
 		}
 	}
-	videoResults, _ := nbaClient.GetPlayerVideos("2021-22", gameID, string(teamID), string(playerID), statType)
+	videoResults, _ := nbaClient.GetPlayerVideos("2021-22", gameID, fmt.Sprint(teamID), fmt.Sprint(playerID), statType)
 	return videoResults
 }
