@@ -183,7 +183,7 @@ func (c *Client) Close() {
 }
 
 // GetPlayerVideos fetches for the videos for a particular player's stats.
-func (c *Client) GetPlayerVideos(season string, gameID string, teamID int, playerID int, statType string) ([]*PlayerVideoResult, error) {
+func (c *Client) GetPlayerVideos(season string, gameID string, teamID string, playerID string, statType string) ([]*PlayerVideoResult, error) {
 	req, err := http.NewRequest("GET", playerVideosAPI, nil)
 
 	if err != nil {
@@ -220,7 +220,7 @@ func (c *Client) GetPlayerVideos(season string, gameID string, teamID int, playe
 	params["Outcome"] = ""
 	params["PORound"] = "0"
 	params["Period"] = "0"
-	params["PlayerID"] = fmt.Sprint(playerID) // "1629001"
+	params["PlayerID"] = playerID // "1629001"
 	params["PlayerID1"] = ""
 	params["PlayerID2"] = ""
 	params["PlayerID3"] = ""
@@ -238,7 +238,7 @@ func (c *Client) GetPlayerVideos(season string, gameID string, teamID int, playe
 	params["StartPeriod"] = "1"
 	params["StartRange"] = "0"
 	params["StarterBench"] = ""
-	params["TeamID"] = fmt.Sprint(teamID) // "1610612763"
+	params["TeamID"] = teamID // "1610612763"
 	params["VsConference"] = ""
 	params["VsDivision"] = ""
 	params["VsPlayerID1"] = ""

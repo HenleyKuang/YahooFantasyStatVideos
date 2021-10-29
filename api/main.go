@@ -6,6 +6,8 @@ import (
 	"log"
 	"main/connection"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 var nbaClient *connection.Client
@@ -22,19 +24,29 @@ func playerIndex(w http.ResponseWriter, r *http.Request) {
 }
 
 func playerVideos(w http.ResponseWriter, r *http.Request) {
-	playerID := 1629001    // Melton
-	teamID := 1610612763   // MEM
-	gameID := "0022100040" // MEM vs GSW on 10/28/2021
-	playerVideoResults, _ := nbaClient.GetPlayerVideos("2021-22", gameID, teamID, playerID, "STL")
+	playerID := r.FormValue("playerID") // e.g. "1629001" for Melton
+	teamID := r.FormValue("teamID")     // e.g. "1610612763" for MEM
+	gameID := r.FormValue("gameID")     // e.g. "0022100040" for MEM vs LAL on 10/24/2021
+	statType := r.FormValue("statType") // e.g. "STL"
+	playerVideoResults, _ := nbaClient.GetPlayerVideos("2021-22", gameID, teamID, playerID, statType)
 	json.NewEncoder(w).Encode(playerVideoResults)
 	fmt.Println("Endpoint Hit: playervideos")
 }
 
 func handleRequests() {
-	http.HandleFunc("/", homePage)
-	http.HandleFunc("/playerindex", playerIndex)
-	http.HandleFunc("/playervideos", playerVideos)
-	log.Fatal(http.ListenAndServe(":10000", nil))
+	// creates a new instance of a mux router
+	myRouter := mux.NewRouter().StrictSlash(true)
+	// replace http.HandleFunc with myRouter.HandleFunc
+	myRouter.HandleFunc("/", homePage)
+	myRouter.HandleFunc("/playerindex", playerIndex)
+	myRouter.Path("/playervideos").
+		Queries("playerID", "teamID", "gameID", "statType").
+		HandlerFunc(playerVideos)
+	myRouter.Path("/playervideos").HandlerFunc(playerVideos)
+	// finally, instead of passing in nil, we want
+	// to pass in our newly created router as the second
+	// argument
+	log.Fatal(http.ListenAndServe(":10000", myRouter))
 }
 
 func main() {
