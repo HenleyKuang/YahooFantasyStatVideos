@@ -18,6 +18,9 @@
           "all_frames": true
         }
     ],
+    "content_security_policy": {
+        "extension_pages": "default-src 'self'; connect-src https://* data: blob: filesystem:;"
+    },
     "permissions": ["storage", "activeTab", "scripting"],
     "action": {
         "default_popup": "popup.html",
