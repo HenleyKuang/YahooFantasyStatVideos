@@ -18,6 +18,12 @@ func init() {
 	defer nbaClient.Close()
 }
 
+func setupCorsResponse(w *http.ResponseWriter, req *http.Request) {
+	(*w).Header().Set("Access-Control-Allow-Origin", "*")
+	(*w).Header().Set("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	(*w).Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Authorization")
+}
+
 func homePage(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Welcome to the HomePage!")
 	fmt.Println("Endpoint Hit: homePage")
@@ -60,6 +66,7 @@ func nbaGames(w http.ResponseWriter, r *http.Request) {
 }
 
 func playerVideos(w http.ResponseWriter, r *http.Request) {
+	setupCorsResponse(&w, r)
 	playerName := r.FormValue("playerName")             // e.g. "De'Anthony Melton"
 	teamAbbreviation := r.FormValue("teamAbbreviation") // e.g. "MEM"
 	gameDate := r.FormValue("gameDate")                 // e.g. "10-28-2021"
