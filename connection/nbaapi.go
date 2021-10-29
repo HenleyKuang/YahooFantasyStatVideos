@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"time"
 )
 
 const (
@@ -108,7 +109,9 @@ type Client struct {
 // New creates a new Client object.
 func New(httpClient *http.Client) *Client {
 	if httpClient == nil {
-		c := &http.Client{}
+		c := &http.Client{
+			Timeout: time.Second * 10,
+		}
 		httpClient = c
 	}
 	return &Client{
