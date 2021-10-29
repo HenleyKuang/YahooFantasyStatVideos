@@ -21,7 +21,12 @@
     "content_security_policy": {
         "extension_pages": "default-src 'self'; connect-src https://* data: blob: filesystem:;"
     },
-    "permissions": ["storage", "activeTab", "scripting"],
+    "permissions": [
+        "storage",
+        "activeTab",
+        "scripting"
+    ],
+    "host_permissions": ["https://yahoo-fantasy-bball-stat-video.herokuapp.com/*"],
     "action": {
         "default_popup": "popup.html",
         "default_icon": {
