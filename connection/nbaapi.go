@@ -1,6 +1,7 @@
 package connection
 
 import (
+	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -10,6 +11,28 @@ import (
 const (
 	playerIndexAPI = "https://stats.nba.com/stats/leaguedashplayerstats?"
 )
+
+type resultSet struct {
+	Headers []string        `json:"headers"`
+	RowSet  [][]interface{} `json:"rowSet"` // either int32 or string elements in the list.
+}
+
+// A Response struct to map the playerIndexAPI response.
+type playerIndexResponse struct {
+	PlayerIndexResultSets []resultSet `json:"resultSets"`
+}
+
+// PlayerIndexResult is the resturned struct for each player found in the player index.
+type PlayerIndexResult struct {
+	PlayerName       string
+	PlayerID         int32
+	TeamAbbreviation string
+	TeamID           int32
+}
+
+func (pr *PlayerIndexResult) String() string {
+	return fmt.Sprintf("%s:%s", pr.TeamAbbreviation, pr.PlayerName)
+}
 
 // Client holds the http connection.
 type Client struct {
@@ -29,7 +52,7 @@ func New(httpClient *http.Client) *Client {
 
 // GetPlayerIndex returns a list of all current nba players with metadata such as player name, player id, team name, team id, etc.
 // Parameter season expects an nba season represented as a string. e.g. "2021-22"
-func (c *Client) GetPlayerIndex(season string) (map[string]interface{}, error) {
+func (c *Client) GetPlayerIndex(season string) (map[string]*PlayerIndexResult, error) {
 	req, err := http.NewRequest("GET", playerIndexAPI, nil)
 
 	if err != nil {
@@ -93,13 +116,45 @@ func (c *Client) GetPlayerIndex(season string) (map[string]interface{}, error) {
 		return nil, err
 	}
 
+	if resp.StatusCode != 200 {
+		err := fmt.Errorf("Status code is not 200 OK. It's %s", resp.Status)
+		fmt.Printf("Errored when sending request to the server. err: %v\n", err)
+		return nil, err
+	}
+
 	defer resp.Body.Close()
-	responseData, _ := ioutil.ReadAll(resp.Body)
+	responseData, err := ioutil.ReadAll(resp.Body)
 
-	fmt.Println(resp.Status)
-	fmt.Println(string(responseData))
+	if err != nil {
+		fmt.Printf("Errored when reading response body. err: %v\n", err)
+		return nil, err
+	}
 
-	return nil, nil
+	var responseObject playerIndexResponse
+	json.Unmarshal(responseData, &responseObject)
+
+	results := map[string]*PlayerIndexResult{}
+
+	for _, row := range responseObject.PlayerIndexResultSets[0].RowSet {
+		newPlayerResult := &PlayerIndexResult{}
+		for idx, header := range responseObject.PlayerIndexResultSets[0].Headers {
+			value := row[idx]
+			switch header {
+			case "PLAYER_ID":
+				newPlayerResult.PlayerID = int32(value.(float64))
+			case "PLAYER_NAME":
+				newPlayerResult.PlayerName = value.(string)
+			case "TEAM_ID":
+				newPlayerResult.TeamID = int32(value.(float64))
+			case "TEAM_ABBREVIATION":
+				newPlayerResult.TeamAbbreviation = value.(string)
+			default:
+			}
+		}
+		results[newPlayerResult.String()] = newPlayerResult
+	}
+
+	return results, nil
 }
 
 // Close closes the underlying http connection.
