@@ -27,9 +27,9 @@ type playerIndexResponse struct {
 // PlayerIndexResult is the returned struct for each player found in the player index.
 type PlayerIndexResult struct {
 	PlayerName       string `json:"player_name"`
-	PlayerID         int32  `json:"player_id"`
+	PlayerID         int    `json:"player_id"`
 	TeamAbbreviation string `json:"team_abbrev"`
-	TeamID           int32  `json:"team_id"`
+	TeamID           int    `json:"team_id"`
 }
 
 type playerVideoLinks struct {
@@ -193,11 +193,11 @@ func (c *Client) GetPlayerIndex(season string) (map[string]*PlayerIndexResult, e
 			value := row[idx]
 			switch header {
 			case "PLAYER_ID":
-				newPlayerResult.PlayerID = int32(value.(float64))
+				newPlayerResult.PlayerID = int(value.(float64))
 			case "PLAYER_NAME":
 				newPlayerResult.PlayerName = value.(string)
 			case "TEAM_ID":
-				newPlayerResult.TeamID = int32(value.(float64))
+				newPlayerResult.TeamID = int(value.(float64))
 			case "TEAM_ABBREVIATION":
 				newPlayerResult.TeamAbbreviation = value.(string)
 			default:
