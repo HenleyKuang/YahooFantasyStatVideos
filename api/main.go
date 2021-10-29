@@ -57,7 +57,7 @@ func playerVideos(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Endpoint Hit: playervideos")
 }
 
-func HandleRequests() {
+func HandleRequests(port string) {
 	// creates a new instance of a mux router
 	myRouter := mux.NewRouter().StrictSlash(true)
 	// replace http.HandleFunc with myRouter.HandleFunc
@@ -84,5 +84,5 @@ func HandleRequests() {
 	// finally, instead of passing in nil, we want
 	// to pass in our newly created router as the second
 	// argument
-	log.Fatal(http.ListenAndServe(":10000", myRouter))
+	log.Fatal(http.ListenAndServe(":"+port, myRouter))
 }
