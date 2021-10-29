@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"main/api"
 	"os"
@@ -13,5 +14,6 @@ func main() {
 	if port == "" {
 		log.Fatal("$PORT must be set")
 	}
+	fmt.Printf("Starting service in port: %s\n", port)
 	api.HandleRequests(port)
 }
