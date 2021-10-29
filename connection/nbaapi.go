@@ -24,10 +24,10 @@ type playerIndexResponse struct {
 
 // PlayerIndexResult is the resturned struct for each player found in the player index.
 type PlayerIndexResult struct {
-	PlayerName       string
-	PlayerID         int32
-	TeamAbbreviation string
-	TeamID           int32
+	PlayerName       string `json:"player_name"`
+	PlayerID         int32  `json:"player_id"`
+	TeamAbbreviation string `json:"team_abbrev"`
+	TeamID           int32  `json:"team_id"`
 }
 
 func (pr *PlayerIndexResult) String() string {
