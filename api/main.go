@@ -1,4 +1,4 @@
-package main
+package api
 
 import (
 	"encoding/json"
@@ -12,6 +12,11 @@ import (
 )
 
 var nbaClient *connection.Client
+
+func init() {
+	nbaClient = connection.New(nil)
+	defer nbaClient.Close()
+}
 
 func homePage(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "Welcome to the HomePage!")
@@ -52,7 +57,7 @@ func playerVideos(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Endpoint Hit: playervideos")
 }
 
-func handleRequests() {
+func HandleRequests() {
 	// creates a new instance of a mux router
 	myRouter := mux.NewRouter().StrictSlash(true)
 	// replace http.HandleFunc with myRouter.HandleFunc
@@ -80,10 +85,4 @@ func handleRequests() {
 	// to pass in our newly created router as the second
 	// argument
 	log.Fatal(http.ListenAndServe(":10000", myRouter))
-}
-
-func main() {
-	nbaClient = connection.New(nil)
-	defer nbaClient.Close()
-	handleRequests()
 }
