@@ -13,22 +13,55 @@ const (
 	playerVideosAPI = "https://stats.nba.com/stats/videodetailsasset?"
 )
 
-type resultSet struct {
+type playerIndexResultSet struct {
 	Headers []string        `json:"headers"`
 	RowSet  [][]interface{} `json:"rowSet"` // either int32 or string elements in the list.
 }
 
 // A Response struct to map the playerIndexAPI response.
 type playerIndexResponse struct {
-	PlayerIndexResultSets []resultSet `json:"resultSets"`
+	PlayerIndexResultSets []playerIndexResultSet `json:"resultSets"`
 }
 
-// PlayerIndexResult is the resturned struct for each player found in the player index.
+// PlayerIndexResult is the returned struct for each player found in the player index.
 type PlayerIndexResult struct {
 	PlayerName       string `json:"player_name"`
 	PlayerID         int32  `json:"player_id"`
 	TeamAbbreviation string `json:"team_abbrev"`
 	TeamID           int32  `json:"team_id"`
+}
+
+type playerVideoLinks struct {
+	LargeVideoURL  string `json:"lurl"`
+	MediumVideoURL string `json:"murl"`
+	SmallVideoURL  string `json:"surl"`
+}
+
+type playerVideoMeta struct {
+	VideoUrls []playerVideoLinks `json:"VideoUrls"`
+}
+
+type playerVideoPlaylist struct {
+	Description  string `json:"dsc"` // e.g. "Jackson Jr. 25' 3PT Jump Shot (6 PTS) (Melton 1 AST)"
+	GameDateName string `json:"gc"`  // e.g. "2021-10-20/CLEMEM"
+}
+
+type playerVideosResultSet struct {
+	Meta     playerVideoMeta       `json:"Meta"`
+	Playlist []playerVideoPlaylist `json:"playlist"` // either int32 or string elements in the list.
+}
+
+// A Response struct to map the playerVideosAPI response.
+type playerVideosResponse struct {
+	PlayerIndexResultSets playerVideosResultSet `json:"resultSets"`
+}
+
+// PlayerVideoResult is the returned struct with the a ssingle video's metadata.
+type PlayerVideoResult struct {
+	LargeVideoURL  string `json:"large_url"`
+	MediumVideoURL string `json:"medium_url"`
+	SmallVideoURL  string `json:"small_url"`
+	Description    string `json:"description"`
 }
 
 func (pr *PlayerIndexResult) String() string {
@@ -150,7 +183,7 @@ func (c *Client) Close() {
 }
 
 // GetPlayerVideos fetches for the videos for a particular player's stats.
-func (c *Client) GetPlayerVideos(season string, gameID string, teamID int, playerID int, statType string) (map[string]string, error) {
+func (c *Client) GetPlayerVideos(season string, gameID string, teamID int, playerID int, statType string) ([]*PlayerVideoResult, error) {
 	req, err := http.NewRequest("GET", playerVideosAPI, nil)
 
 	if err != nil {
@@ -242,9 +275,21 @@ func (c *Client) GetPlayerVideos(season string, gameID string, teamID int, playe
 		return nil, err
 	}
 
-	fmt.Println(string(responseData))
+	var responseObject playerVideosResponse
+	json.Unmarshal(responseData, &responseObject)
 
-	return nil, nil
+	results := []*PlayerVideoResult{}
+	for idx, videoURL := range responseObject.PlayerIndexResultSets.Meta.VideoUrls {
+		videoResult := &PlayerVideoResult{
+			LargeVideoURL:  videoURL.LargeVideoURL,
+			MediumVideoURL: videoURL.MediumVideoURL,
+			SmallVideoURL:  videoURL.SmallVideoURL,
+			Description:    responseObject.PlayerIndexResultSets.Playlist[idx].Description,
+		}
+		results = append(results, videoResult)
+	}
+
+	return results, nil
 }
 
 func setRequestHeaders(header *http.Header) {
