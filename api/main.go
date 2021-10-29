@@ -33,6 +33,14 @@ func playerVideos(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Endpoint Hit: playervideos")
 }
 
+func nbaGames(w http.ResponseWriter, r *http.Request) {
+	gameDate := r.FormValue("gameDate") // e.g. "10-29-2021"
+	fmt.Printf("%s", gameDate)
+	gameResults, _ := nbaClient.GetGames(gameDate)
+	json.NewEncoder(w).Encode(gameResults)
+	fmt.Println("Endpoint Hit: nbagames")
+}
+
 func handleRequests() {
 	// creates a new instance of a mux router
 	myRouter := mux.NewRouter().StrictSlash(true)
@@ -40,9 +48,14 @@ func handleRequests() {
 	myRouter.HandleFunc("/", homePage)
 	myRouter.HandleFunc("/playerindex", playerIndex)
 	myRouter.Path("/playervideos").
-		Queries("playerID", "teamID", "gameID", "statType").
+		Queries("playerID", "{playerID:[0-9]+}",
+			"teamID", "{teamID:[0-9]+}",
+			"gameID", "{gameID:[0-9]+}",
+			"statType", "{statType:[A-Z0-9]+}").
 		HandlerFunc(playerVideos)
 	myRouter.Path("/playervideos").HandlerFunc(playerVideos)
+	myRouter.Path("/nbagames").Queries("gameDate", "{gameDate:\\d{4}-\\d{2}-\\d{2}").HandlerFunc(nbaGames)
+	myRouter.Path("/nbagames").HandlerFunc(nbaGames)
 	// finally, instead of passing in nil, we want
 	// to pass in our newly created router as the second
 	// argument
