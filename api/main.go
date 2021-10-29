@@ -57,6 +57,7 @@ func playerVideos(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Endpoint Hit: playervideos")
 }
 
+// HandleRequests sets up the api endpoints.
 func HandleRequests(port string) {
 	// creates a new instance of a mux router
 	myRouter := mux.NewRouter().StrictSlash(true)
