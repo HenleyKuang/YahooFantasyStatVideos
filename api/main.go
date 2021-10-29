@@ -26,6 +26,7 @@ func homePage(w http.ResponseWriter, r *http.Request) {
 func playerIndex(w http.ResponseWriter, r *http.Request) {
 	playerResults, _ := nbaClient.GetPlayerIndex("2021-22")
 	json.NewEncoder(w).Encode(playerResults)
+	w.WriteHeader(200)
 	fmt.Println("Endpoint Hit: playerIndex")
 }
 
@@ -34,16 +35,27 @@ func playerGameVideos(w http.ResponseWriter, r *http.Request) {
 	teamID := r.FormValue("teamID")     // e.g. "1610612763" for MEM
 	gameID := r.FormValue("gameID")     // e.g. "0022100040" for MEM vs LAL on 10/24/2021
 	statType := r.FormValue("statType") // e.g. "STL"
-	playerVideoResults, _ := nbaClient.GetPlayerVideos("2021-22", gameID, teamID, playerID, statType)
-	json.NewEncoder(w).Encode(playerVideoResults)
+	if playerID == "" || teamID == "" || gameID == "" || statType == "" {
+		w.Header().Set("Invalid Request", "Request is invalid")
+		w.WriteHeader(400)
+	} else {
+		playerVideoResults, _ := nbaClient.GetPlayerVideos("2021-22", gameID, teamID, playerID, statType)
+		json.NewEncoder(w).Encode(playerVideoResults)
+		w.WriteHeader(200)
+	}
 	fmt.Println("Endpoint Hit: playergamevideos")
 }
 
 func nbaGames(w http.ResponseWriter, r *http.Request) {
 	gameDate := r.FormValue("gameDate") // e.g. "10-29-2021"
-	fmt.Printf("%s", gameDate)
-	gameResults, _ := nbaClient.GetGames(gameDate)
-	json.NewEncoder(w).Encode(gameResults)
+	if gameDate == "" {
+		w.Header().Set("Invalid Request", "Request is invalid")
+		w.WriteHeader(400)
+	} else {
+		gameResults, _ := nbaClient.GetGames(gameDate)
+		json.NewEncoder(w).Encode(gameResults)
+		w.WriteHeader(200)
+	}
 	fmt.Println("Endpoint Hit: nbagames")
 }
 
@@ -52,8 +64,14 @@ func playerVideos(w http.ResponseWriter, r *http.Request) {
 	teamAbbreviation := r.FormValue("teamAbbreviation") // e.g. "MEM"
 	gameDate := r.FormValue("gameDate")                 // e.g. "10-28-2021"
 	statType := r.FormValue("statType")                 // e.g. "STL"
-	gameResults := service.GetVideos(nbaClient, playerName, teamAbbreviation, gameDate, statType)
-	json.NewEncoder(w).Encode(gameResults)
+	if playerName == "" || teamAbbreviation == "" || gameDate == "" || statType == "" {
+		w.Header().Set("Invalid Request", "Request is invalid")
+		w.WriteHeader(400)
+	} else {
+		gameResults := service.GetVideos(nbaClient, playerName, teamAbbreviation, gameDate, statType)
+		json.NewEncoder(w).Encode(gameResults)
+		w.WriteHeader(200)
+	}
 	fmt.Println("Endpoint Hit: playervideos")
 }
 
