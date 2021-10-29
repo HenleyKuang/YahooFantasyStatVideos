@@ -9,6 +9,7 @@ import (
 )
 
 const (
+	scoreboardAPI   = "https://stats.nba.com/stats/scoreboardv3?"
 	playerIndexAPI  = "https://stats.nba.com/stats/leaguedashplayerstats?"
 	playerVideosAPI = "https://stats.nba.com/stats/videodetailsasset?"
 )
@@ -56,12 +57,43 @@ type playerVideosResponse struct {
 	PlayerIndexResultSets playerVideosResultSet `json:"resultSets"`
 }
 
-// PlayerVideoResult is the returned struct with the a ssingle video's metadata.
+// PlayerVideoResult is the returned struct with the a single video's metadata.
 type PlayerVideoResult struct {
 	LargeVideoURL  string `json:"large_url"`
 	MediumVideoURL string `json:"medium_url"`
 	SmallVideoURL  string `json:"small_url"`
 	Description    string `json:"description"`
+}
+
+type scoreboardTeam struct {
+	TeamID           int    `json:"teamId"`
+	TeamAbbreviation string `json:"teamTricode"`
+}
+
+type scoreboardGames struct {
+	GameID   string         `json:"gameId"`
+	GameCode string         `json:"gameCode"`
+	AwayTeam scoreboardTeam `json:"awayTeam"`
+	HomeTeam scoreboardTeam `json:"homeTeam"`
+}
+
+type scoreboardResult struct {
+	Games []scoreboardGames `json:"games"`
+}
+
+// A Response struct to map the scoreboardAPI response.
+type scoreboardResponse struct {
+	Scoreboard scoreboardResult `json:"scoreboard"`
+}
+
+// GameResult is the returned struct with the a game's metadata.
+type GameResult struct {
+	GameID               string `json:"game_id"`
+	GameCode             string `json:"game_code"`
+	AwayTeamID           int    `json:"away_team_id"`
+	AwayTeamAbbreviation string `json:"away_team_abbrev"`
+	HomeTeamID           int    `json:"home_team_id"`
+	HomeTeamAbbreviation string `json:"home_team_abbrev"`
 }
 
 func (pr *PlayerIndexResult) String() string {
@@ -177,11 +209,6 @@ func (c *Client) GetPlayerIndex(season string) (map[string]*PlayerIndexResult, e
 	return results, nil
 }
 
-// Close closes the underlying http connection.
-func (c *Client) Close() {
-	c.httpClient.CloseIdleConnections()
-}
-
 // GetPlayerVideos fetches for the videos for a particular player's stats.
 func (c *Client) GetPlayerVideos(season string, gameID string, teamID string, playerID string, statType string) ([]*PlayerVideoResult, error) {
 	req, err := http.NewRequest("GET", playerVideosAPI, nil)
@@ -290,6 +317,71 @@ func (c *Client) GetPlayerVideos(season string, gameID string, teamID string, pl
 	}
 
 	return results, nil
+}
+
+// GetGames returns a list of all games for the a specific date.
+// Parameter date should be represented as a string in YYYY-MM-DD. e.g. "2021-10-25"
+func (c *Client) GetGames(date string) ([]*GameResult, error) {
+	req, err := http.NewRequest("GET", scoreboardAPI, nil)
+
+	if err != nil {
+		log.Printf("Errored creating NewRequest. err: %v\n", err)
+		return nil, err
+	}
+
+	q := req.URL.Query()
+	params := map[string]string{}
+	params["GameDate"] = date // "2021-10-25"
+	params["LeagueID"] = "00"
+	for qName, qValue := range params {
+		q.Add(qName, qValue)
+	}
+	req.URL.RawQuery = q.Encode()
+	setRequestHeaders(&req.Header)
+
+	resp, err := c.httpClient.Do(req)
+
+	if err != nil {
+		fmt.Printf("Errored when sending request to the server. err: %v\n", err)
+		return nil, err
+	}
+
+	if resp.StatusCode != 200 {
+		err := fmt.Errorf("Status code is not 200 OK. It's %s", resp.Status)
+		fmt.Printf("Errored when sending request to the server. err: %v\n", err)
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+	responseData, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		fmt.Printf("Errored when reading response body. err: %v\n", err)
+		return nil, err
+	}
+
+	var responseObject scoreboardResponse
+	json.Unmarshal(responseData, &responseObject)
+
+	results := []*GameResult{}
+	for _, game := range responseObject.Scoreboard.Games {
+		gameResult := &GameResult{
+			GameID:               game.GameID,
+			GameCode:             game.GameCode,
+			AwayTeamID:           game.AwayTeam.TeamID,
+			AwayTeamAbbreviation: game.AwayTeam.TeamAbbreviation,
+			HomeTeamID:           game.HomeTeam.TeamID,
+			HomeTeamAbbreviation: game.HomeTeam.TeamAbbreviation,
+		}
+		results = append(results, gameResult)
+	}
+
+	return results, nil
+}
+
+// Close closes the underlying http connection.
+func (c *Client) Close() {
+	c.httpClient.CloseIdleConnections()
 }
 
 func setRequestHeaders(header *http.Header) {
