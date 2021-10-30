@@ -8,8 +8,7 @@
           "matches": [
             "*://basketball.fantasysports.yahoo.com/*"
           ],
-          "css": ["/static/css/main.css"],
-          "js": ["/static/js/main.js"],
+          "js": ["./static/js/content.js"],
           "run_at": "document_end",
           "all_frames": true
         }
@@ -18,13 +17,11 @@
         "extension_pages": "default-src 'self'; connect-src https://* data: blob: filesystem:;"
     },
     "permissions": [
-        "storage",
-        "activeTab",
-        "scripting"
+        "activeTab"
     ],
     "host_permissions": ["https://yahoo-fantasy-bball-stat-video.herokuapp.com/*"],
     "action": {
-        "default_popup": "popup.html",
+        "default_popup": "index.html",
         "default_icon": {
             "16": "logo512.png",
             "32": "logo512.png",
@@ -33,9 +30,9 @@
         }
     },
     "icons": {
-        "16": "favoicon.ico",
-        "32": "favoicon.ico",
-        "48": "favoicon.ico",
-        "128": "favoicon.ico"
+        "16": "favicon.ico",
+        "32": "favicon.ico",
+        "48": "favicon.ico",
+        "128": "favicon.ico"
     }
   }
