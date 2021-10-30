@@ -5,12 +5,22 @@
     "manifest_version": 3,
     "content_scripts": [
         {
-          "matches": [
-            "*://basketball.fantasysports.yahoo.com/*"
-          ],
-          "js": ["./static/js/content.js"],
-          "run_at": "document_end",
-          "all_frames": true
+            "matches": [
+                "*://basketball.fantasysports.yahoo.com/*"
+            ],
+            "css": ["./static/css/modal.css"],
+            "js": ["./static/js/content.js"],
+            "run_at": "document_end",
+            "all_frames": true
+        },
+        {
+            "matches": [
+                "*://basketball.fantasysports.yahoo.com/*"
+            ],
+            "css": ["./static/css/videojs.css"],
+            "js": ["./static/js/video.js"],
+            "run_at": "document_start",
+            "all_frames": true
         }
     ],
     "content_security_policy": {
