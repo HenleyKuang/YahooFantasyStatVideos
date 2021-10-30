@@ -218,6 +218,7 @@ function updateModalDisplayData(playerName: string, teamAbbreviation: string, vi
 id="php-video-player"
 class="video-js"
 controls
+autoplay
 preload="auto"
 width="480"
 height="270"
