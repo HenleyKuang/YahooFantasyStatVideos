@@ -1,3 +1,7 @@
+// import Modal from 'bootstrap/js/dist/modal';
+// import './modules/bootstrap.bundle.js'
+import MicroModal from './modules/micromodal.min.js';
+
 const API_HOST = "https://yahoo-fantasy-bball-stat-video.herokuapp.com"
 const SELECTED_DATE : any = getSelectedDate()
 
@@ -130,20 +134,28 @@ async function updateStatCells() {
                 case "Free Throws Made/Free Throws Attempted": // @ts-ignore
                     let nbaAPIStatNames : any = ATTRIBUTES_MAP[yahooStatName]
                     for (let statType in nbaAPIStatNames) {
-                        makeCellClickable(statCellElem, playerName, teamAbbreviation, statType)
+                        makeCellClickable(statCellElem, playerName, teamAbbreviation, statType, statValue, yahooStatName)
                     }
                     break
                 default:
                     if (ATTRIBUTES_MAP.hasOwnProperty(yahooStatName)) {
                         let statType : any = ATTRIBUTES_MAP[yahooStatName]
-                        makeCellClickable(statCellElem, playerName, teamAbbreviation, statType)
+                        makeCellClickable(statCellElem, playerName, teamAbbreviation, statType, statValue, yahooStatName)
                     }
             }
         }
     }
 }
 
-function makeCellClickable(element: Node, playerName: string, teamAbbreviation: string, statType: string) {
+function getOffset(el : any) {
+    const rect = el.getBoundingClientRect();
+    return {
+      left: rect.right + window.scrollX,
+      top: rect.top + window.scrollY
+    };
+}
+
+function makeCellClickable(element: Node, playerName: string, teamAbbreviation: string, statType: string, statValue: string, yahooStatName: string) {
     // `element` is the element you want to wrap
     let parent : any = element.parentNode;
     var wrapper = document.createElement('a');
@@ -156,28 +168,41 @@ function makeCellClickable(element: Node, playerName: string, teamAbbreviation: 
 
     let link = createLink(playerName, teamAbbreviation, SELECTED_DATE, statType)
 
-    wrapper.addEventListener('click', async () => {
+    wrapper.addEventListener('click', async (e : any) => {
         // console.log(link);
         let videoResults : any[] = await getVideos(link)
-        updateModalDisplayData(playerName, teamAbbreviation, videoResults)
+        updateModalDisplayData(playerName, teamAbbreviation, yahooStatName, statValue, videoResults)
+        // set modal left and top location
+        let offset = getOffset(e.target)
+        let modalContainer = (document.getElementById("modal-1-container") as HTMLElement)
+        modalContainer.style.left = (offset.left + 10).toString() + "px"
+        modalContainer.style.top = offset.top.toString() + "px"
+        MicroModal.show('modal-1');
     })
 }
 
 function createModal() {
     let modalHtml : string = `
-<div class="play-by-play-videos-modal" style="left: 735.891px; top: 541.984px;">
-    <div class="play-by-play-modal-header">
-        <h5>Play by Play Videos</h5>
-    </div>
-    <div class="play-by-play-modal-body">
-        <div class="pbp-player-info">
-            <h4 id="pbp-player-name"></h4>
-            <h4 id="pbp-team-name"></h4>
-        </div>
-        <ul id="pbp-videos-list"></ul>
-        <div id="php-video-container"></div>
-    </div>
-    <div class="play-by-play-modal-footer"></div>
+<div class="modal micromodal-slide" id="modal-1" aria-hidden="true">
+<div class="modal__overlay" tabindex="-1" data-micromodal-close>
+  <div class="modal__container" id="modal-1-container" role="dialog" aria-modal="true" aria-labelledby="modal-1-title">
+    <header class="modal__header">
+      <h2 class="modal__title" id="modal-1-title"></h2>
+      <button class="modal__close" aria-label="Close modal" data-micromodal-close></button>
+    </header>
+    <main class="modal__content" id="modal-1-content">
+      <h4 id="pbp-player-name"></h4>
+      <h4 id="pbp-team-name"></h4>
+      <h4 id="pbp-stat-name"></h4>
+      <ul id="pbp-videos-list"></ul>
+      <div id="php-video-container"></div>
+    </main>
+    <footer class="modal__footer">
+      <button class="modal__btn modal__btn-primary">Continue</button>
+      <button class="modal__btn" data-micromodal-close aria-label="Close this dialog window">Close</button>
+    </footer>
+  </div>
+</div>
 </div>
     `
     var div = document.createElement('div');
@@ -185,15 +210,17 @@ function createModal() {
     let modalElem = div.firstChild;
     let outwrapperElem : any = document.getElementById("outer-wrapper")
     outwrapperElem.appendChild(modalElem)
+    console.log(modalElem)
+    MicroModal.init()
 }
 
-function updateModalDisplayData(playerName: string, teamAbbreviation: string, videoResults : any[]) {
-    // Update Header to Player Name and Team.
-    let playerNameElem : any = document.getElementById("pbp-player-name")
-    playerNameElem.innerText = playerName
-    let teamNameElem : any = document.getElementById("pbp-team-name")
-    teamNameElem.innerText = teamAbbreviation
+async function updateModalDisplayData(playerName: string, teamAbbreviation: string, yahooStatName: string, statValue: string, videoResults : any[]) {
+    // Update modal title to Player Name and the stat title.
+    let statTitle = statValue + " " + yahooStatName // e.g. 4 3-point Shots Made
+    let modalTitleElem : any = document.getElementById("modal-1-title")
+    modalTitleElem.innerText = playerName + " - " + statTitle
     // Update Header to Show Player Photo.
+    // TODO(henleyk)
     // Update Body to Show List of Videos Links.
     let pbpVideosListElem = document.getElementById("pbp-videos-list")
     if (pbpVideosListElem == null) {
@@ -201,18 +228,22 @@ function updateModalDisplayData(playerName: string, teamAbbreviation: string, vi
         return
     }
     // Delete all list items.
-    pbpVideosListElem.childNodes.forEach((elem) => elem.remove())
+    while (pbpVideosListElem.firstChild) {
+        pbpVideosListElem.removeChild(pbpVideosListElem.firstChild);
+    }
     // Repopulate list items.
     for (let idx = 0; idx < videoResults.length; idx++) {
         let result = videoResults[idx]
         let description : string = result["description"]
-        let videoURL : string = result["small_url"]
+        let videoURL : string = result["medium_url"]
         console.log(description)
         console.log(videoURL)
         let listElem = document.createElement('li');
         listElem.innerText = description
         // Add click listener for each list item.
         listElem.addEventListener('click', () => {
+            // delete current video player
+            document.getElementById("php-video-player")?.remove()
             let videoHtml : string = `
 <video
 id="php-video-player"
@@ -236,14 +267,19 @@ data-setup="{}"
             let videoElem = div.firstChild
             let phpVideoContainerElem : any = document.getElementById("php-video-container")
             phpVideoContainerElem.appendChild(videoElem)
-            // @ts-ignore
-            videojs("php-video-player");
         })
         pbpVideosListElem.appendChild(listElem)
     }
 }
 
-createModal()
-updateStatCells()
+try { init(); } catch (e) { console.error(e); }
+
+function init() {
+    createModal()
+    updateStatCells()
+    // var myModal : any = new Modal((document.getElementById('myModal') as any), {})
+    // console.log(myModal)
+    // console.log(bootstrap)
+}
 
 export {}

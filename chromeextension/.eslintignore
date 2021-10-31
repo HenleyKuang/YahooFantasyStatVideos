@@ -1,1 +1,3 @@
-src/chromeServices/video.js
+src/chromeServices/modules/bootstrap.bundle.js
+src/chromeServices/DOMEvaluator.ts
+src/chromeServices/modules/*

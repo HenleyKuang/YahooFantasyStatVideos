@@ -9,12 +9,13 @@ module.exports = {
                     main: [env === 'development' && require.resolve('react-dev-utils/webpackHotDevClient'),paths.appIndexJs].filter(Boolean),
                     content: './src/chromeServices/DOMEvaluator.ts',
                     modal: './src/chromeServices/DOMEvaluator.css',
-                    video: './src/chromeServices/video.js',
                     videojs: './src/chromeServices/video.min.css',
                 },
                 output: {
                     ...webpackConfig.output,
-                    filename: 'static/js/[name].js',
+                    filename:  (/*{ chunk: { name } } */) => {
+                        return 'static/js/[name].js';
+                    }
                 },
                 optimization: {
                     ...webpackConfig.optimization,
