@@ -1,14 +1,14 @@
 {
-    "name": "Getting Started Example",
-    "description": "Build an Extension!",
-    "version": "1.0",
+    "name": "Fantasy Basketball Video Replays",
+    "description": "Watch replays of every individual statistic right on your fantasy basketball pages.",
+    "version": "0.0.1",
     "manifest_version": 3,
     "content_scripts": [
         {
             "matches": [
                 "*://basketball.fantasysports.yahoo.com/*"
             ],
-            "css": ["./static/css/modal.css", "./static/css/videojs.css"],
+            "css": ["./static/css/bootstraplistgroup.css", "./static/css/modal.css", "./static/css/videojs.css"],
             "js": ["./static/js/content.js"],
             "run_at": "document_end",
             "all_frames": true
@@ -26,16 +26,16 @@
     "action": {
         "default_popup": "index.html",
         "default_icon": {
-            "16": "logo512.png",
-            "32": "logo512.png",
-            "48": "logo512.png",
-            "128": "logo512.png"
+            "16": "play-button-16.png",
+            "32": "play-button-32.png",
+            "48": "play-button-48.png",
+            "128": "play-button-128.png"
         }
     },
     "icons": {
-        "16": "favicon.ico",
-        "32": "favicon.ico",
-        "48": "favicon.ico",
-        "128": "favicon.ico"
+        "16": "play-button.svg",
+        "32": "play-button.svg",
+        "48": "play-button.svg",
+        "128": "play-button.svg"
     }
   }

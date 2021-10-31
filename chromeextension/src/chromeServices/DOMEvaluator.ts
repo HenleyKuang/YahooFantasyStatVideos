@@ -4,6 +4,22 @@ import MicroModal from './modules/micromodal.min.js';
 
 const API_HOST = "https://yahoo-fantasy-bball-stat-video.herokuapp.com"
 const SELECTED_DATE : any = getSelectedDate()
+const MODAL_CONFIG = {
+    // onShow: (modal : any) => console.info(`${modal.id} is shown`), // [1]
+    onClose: () => {
+        document.getElementById("php-video-player")?.remove()
+    }, // [2]
+    openTrigger: 'data-micromodal-open', // [3]
+    closeTrigger: 'data-micromodal-close', // [4]
+    openClass: 'is-open', // [5]
+    disableScroll: false, // [6]
+    disableFocus: false, // [7]
+    awaitOpenAnimation: false, // [8]
+    awaitCloseAnimation: false, // [9]
+    debugMode: false // [10]
+}
+
+var currentSelectedListElem = document.createElement('li');;
 
 // ATTRIBUTES_MAP key = Yahoo's Naming. Value = NBA's API Naming.
 const ATTRIBUTES_MAP : { [key: string]: string | string[] } = {
@@ -175,9 +191,12 @@ function makeCellClickable(element: Node, playerName: string, teamAbbreviation: 
         // set modal left and top location
         let offset = getOffset(e.target)
         let modalContainer = (document.getElementById("modal-1-container") as HTMLElement)
-        modalContainer.style.left = (offset.left + 10).toString() + "px"
-        modalContainer.style.top = offset.top.toString() + "px"
-        MicroModal.show('modal-1');
+        MicroModal.show('modal-1', MODAL_CONFIG);
+        // click first video in the list to start trigger video playing.
+        currentSelectedListElem.click()
+        // adjust location of modal.
+        modalContainer.style.left = (offset.left - modalContainer.offsetWidth - 30).toString() + "px"
+        modalContainer.style.top = (offset.top - modalContainer.offsetHeight/2).toString() + "px"
     })
 }
 
@@ -187,19 +206,31 @@ function createModal() {
 <div class="modal__overlay" tabindex="-1" data-micromodal-close>
   <div class="modal__container" id="modal-1-container" role="dialog" aria-modal="true" aria-labelledby="modal-1-title">
     <header class="modal__header">
-      <h2 class="modal__title" id="modal-1-title"></h2>
+      <h4 class="modal__title" id="modal-1-title"></h4>
       <button class="modal__close" aria-label="Close modal" data-micromodal-close></button>
     </header>
     <main class="modal__content" id="modal-1-content">
-      <h4 id="pbp-player-name"></h4>
-      <h4 id="pbp-team-name"></h4>
-      <h4 id="pbp-stat-name"></h4>
-      <ul id="pbp-videos-list"></ul>
-      <div id="php-video-container"></div>
+      <ol class="list-group list-group-numbered" id="pbp-videos-list"></ol>
+      <div id="php-video-container">
+        <video
+            id="php-video-player"
+            class="video-js"
+            controls
+            autoplay
+            preload="auto"
+            width="480"
+            height="270"
+            data-setup="{}"
+        >
+            <source src="" type="video/mp4" />
+            <p class="vjs-no-js">
+                To view this video please enable JavaScript, and consider upgrading to a web browser that
+                <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a>
+            </p>
+        </video>
+      </div>
     </main>
     <footer class="modal__footer">
-      <button class="modal__btn modal__btn-primary">Continue</button>
-      <button class="modal__btn" data-micromodal-close aria-label="Close this dialog window">Close</button>
     </footer>
   </div>
 </div>
@@ -210,8 +241,7 @@ function createModal() {
     let modalElem = div.firstChild;
     let outwrapperElem : any = document.getElementById("outer-wrapper")
     outwrapperElem.appendChild(modalElem)
-    console.log(modalElem)
-    MicroModal.init()
+    MicroModal.init(MODAL_CONFIG)
 }
 
 async function updateModalDisplayData(playerName: string, teamAbbreviation: string, yahooStatName: string, statValue: string, videoResults : any[]) {
@@ -236,12 +266,27 @@ async function updateModalDisplayData(playerName: string, teamAbbreviation: stri
         let result = videoResults[idx]
         let description : string = result["description"]
         let videoURL : string = result["medium_url"]
-        console.log(description)
-        console.log(videoURL)
+        // console.log(description)
+        // console.log(videoURL)
         let listElem = document.createElement('li');
         listElem.innerText = description
-        // Add click listener for each list item.
-        listElem.addEventListener('click', () => {
+        listElem.style.cursor = "pointer"
+        listElem.classList.add("list-group-item", "list-group-item-action")
+        if (idx == 0) {
+            listElem.classList.add("active")
+            listElem.setAttribute("aria-current", "true")
+            currentSelectedListElem = listElem
+        }
+        // Add click listener for each list item to update it's attributes.
+        listElem.addEventListener('click', function () {
+            currentSelectedListElem.removeAttribute("aria-current")
+            currentSelectedListElem.classList.remove("active")
+            this.setAttribute("aria-current", "true")
+            this.classList.add("active")
+            currentSelectedListElem = this
+        })
+        // Add click listener for each list item to update video player.
+        listElem.addEventListener('click', (e) => {
             // delete current video player
             document.getElementById("php-video-player")?.remove()
             let videoHtml : string = `
@@ -277,9 +322,6 @@ try { init(); } catch (e) { console.error(e); }
 function init() {
     createModal()
     updateStatCells()
-    // var myModal : any = new Modal((document.getElementById('myModal') as any), {})
-    // console.log(myModal)
-    // console.log(bootstrap)
 }
 
 export {}

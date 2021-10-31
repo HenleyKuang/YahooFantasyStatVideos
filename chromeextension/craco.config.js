@@ -8,6 +8,8 @@ module.exports = {
                 entry: {
                     main: [env === 'development' && require.resolve('react-dev-utils/webpackHotDevClient'),paths.appIndexJs].filter(Boolean),
                     content: './src/chromeServices/DOMEvaluator.ts',
+                    // CSS
+                    bootstraplistgroup: './src/chromeServices/bootstrap-list-group.css',
                     modal: './src/chromeServices/DOMEvaluator.css',
                     videojs: './src/chromeServices/video.min.css',
                 },
