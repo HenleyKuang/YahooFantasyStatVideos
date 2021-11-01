@@ -20,9 +20,6 @@
     "permissions": [
         "activeTab"
     ],
-    "host_permissions": [
-        "https://yahoo-fantasy-bball-stat-video.herokuapp.com/*"
-    ],
     "action": {
         "default_popup": "index.html",
         "default_icon": {
