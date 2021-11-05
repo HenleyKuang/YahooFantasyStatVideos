@@ -22,9 +22,12 @@ const MODAL_CONFIG = {
 var currentSelectedListElem = document.createElement('li');;
 
 // ATTRIBUTES_MAP key = Yahoo's Naming. Value = NBA's API Naming.
-const ATTRIBUTES_MAP : { [key: string]: string | string[] } = {
-    "FGM/A*": ["FGM", "FGA"],
-    "FTM/A*": ["FTM", "FTA"],
+// const ATTRIBUTES_MAP : { [key: string]: string | string[] } = {
+const ATTRIBUTES_MAP : { [key: string]: string } = {
+    // "FGM/A*": ["FGM", "FGA"],
+    // "FTM/A*": ["FTM", "FTA"],
+    "FGM/A*": "FGA",
+    // "FTM/A*": "FTA",
     "3PTM": "FG3M",
     "REB": "REB",
     "AST": "AST",
@@ -117,10 +120,10 @@ async function updateStatCells() {
                 continue
             }
             switch (yahooStatName) {
-                case "FGM/A*":
-                case "FGT/A*": // @ts-ignore
-                    // TODO(henleyk): Support FGM/A and FTM/A. These require additional logic to parse and inject 2 links.
-                    break
+                // case "FGM/A*":
+                // case "FGT/A*": // @ts-ignore
+                //     // TODO(henleyk): Support FGM/A and FTM/A. These require additional logic to parse and inject 2 links.
+                //     break
                 default:
                     makeCellClickable(statCellElem, playerName, teamAbbreviation, (nbaAPIStatName as string), statValue, yahooStatName)
             }
@@ -137,6 +140,11 @@ function getOffset(el : any) {
 }
 
 function makeCellClickable(element: Node, playerName: string, teamAbbreviation: string, statType: string, statValue: string, yahooStatName: string) {
+    // FGM/A* and FTM/A* has a span child element with a faded text class. Set the color explicitly to blue like a link.
+    let spanChild = (element as HTMLElement).querySelector("span")
+    if (spanChild) {
+        spanChild.style.color = "#0078FF"
+    }
     // `element` is the element you want to wrap
     let parent : any = element.parentNode;
     var wrapper = document.createElement('a');
@@ -155,17 +163,19 @@ function makeCellClickable(element: Node, playerName: string, teamAbbreviation: 
         deleteVideoListInModal();
         (document.querySelector("#php-video-player > source") as HTMLElement).setAttribute("src", "");
         (document.querySelector("#loading-img") as HTMLElement).style.display = "inline"
+        // adjust location of modal to left side of the stat clicked.
+        let offset = getOffset(e.target)
+        let modalContainer = (document.getElementById("modal-1-container") as HTMLElement)
+        modalContainer.style.left = (offset.left - modalContainer.offsetWidth - 30).toString() + "px"
+        modalContainer.style.top = (offset.top - modalContainer.offsetHeight/2).toString() + "px"
         // Show the modal with loading screen.
         MicroModal.show('modal-1', MODAL_CONFIG);
+        // Update modal data.
         let videoResults : any[] = await getVideos(link)
         updateModalDisplayData(playerName, teamAbbreviation, yahooStatName, statValue, videoResults);
         (document.querySelector("#loading-img") as HTMLElement).style.display = "none"
-        // set modal left and top location
-        let offset = getOffset(e.target)
-        let modalContainer = (document.getElementById("modal-1-container") as HTMLElement)
         // click first video in the list to start trigger video playing.
         currentSelectedListElem.click()
-        // adjust location of modal.
         modalContainer.style.left = (offset.left - modalContainer.offsetWidth - 30).toString() + "px"
         modalContainer.style.top = (offset.top - modalContainer.offsetHeight/2).toString() + "px"
     })
@@ -183,7 +193,7 @@ function createModal() {
     </header>
     <main class="modal__content" id="modal-1-content">
       <img id="loading-img" src="${loadingImgSrc}" />
-      <ol class="list-group list-group-numbered" id="pbp-videos-list"></ol>
+      <ol class="list-group list-group-numbered pbp-videos-list" id="pbp-videos-list"></ol>
       <div id="php-video-container">
         <video
             id="php-video-player"
