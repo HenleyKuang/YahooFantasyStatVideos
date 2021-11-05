@@ -6,7 +6,7 @@
     "content_scripts": [
         {
             "matches": [
-                "*://basketball.fantasysports.yahoo.com/*"
+                "https://basketball.fantasysports.yahoo.com/nba/*"
             ],
             "css": ["./static/css/bootstraplistgroup.css", "./static/css/modal.css", "./static/css/videojs.css"],
             "js": ["./static/js/content.js"],
@@ -34,5 +34,9 @@
         "32": "play-button.svg",
         "48": "play-button.svg",
         "128": "play-button.svg"
-    }
+    },
+    "web_accessible_resources": [{
+        "resources": ["ball-triangle.svg"],
+        "matches": ["https://basketball.fantasysports.yahoo.com/*"]
+    }]
   }

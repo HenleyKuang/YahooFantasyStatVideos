@@ -7,7 +7,7 @@ const SELECTED_DATE : any = getSelectedDate()
 const MODAL_CONFIG = {
     // onShow: (modal : any) => console.info(`${modal.id} is shown`), // [1]
     onClose: () => {
-        document.getElementById("php-video-player")?.remove()
+        (document.getElementById("php-video-player") as HTMLVideoElement).pause()
     }, // [2]
     openTrigger: 'data-micromodal-open', // [3]
     closeTrigger: 'data-micromodal-close', // [4]
@@ -23,14 +23,14 @@ var currentSelectedListElem = document.createElement('li');;
 
 // ATTRIBUTES_MAP key = Yahoo's Naming. Value = NBA's API Naming.
 const ATTRIBUTES_MAP : { [key: string]: string | string[] } = {
-    "Field Goals Made/Field Goals Attempted": ["FGM", "FGA"],
-    "Free Throws Made/Free Throws Attempted": ["FGM", "FGA"],
-    "3-point Shots Made": "FG3M",
-    "Total Rebounds": "REB",
-    "Assists": "AST",
-    "Steals": "STL",
-    "Blocked Shots": "BLK",
-    "Turnovers": "TOV",
+    "FGM/A*": ["FGM", "FGA"],
+    "FTM/A*": ["FTM", "FTA"],
+    "3PTM": "FG3M",
+    "REB": "REB",
+    "AST": "AST",
+    "ST": "STL",
+    "BLK": "BLK",
+    "TO": "TOV",
 }
 
 function getElementsByXpath(path: string, parent: Node | null) {
@@ -67,6 +67,21 @@ function createLink(playerName: string, teamAbbreviation: string, gameDate: stri
     return url.toString()
 }
 
+function parseHTMLTableElem(tableEl : HTMLElement) {
+    const columns = Array.from(tableEl.querySelectorAll('tr.Alt.Last > th')).map(it => it.textContent)
+    const rows = tableEl.querySelectorAll('tbody > tr')
+    return Array.from(rows).map(row => {
+        const cells : any = Array.from(getElementsByXpath(`td[not(.//a[@title="Add to Watch List"])]`, row))
+        return columns.reduce((obj : any, col : any, idx : any) => {
+            obj[col] = {
+                "innerText": cells[idx].innerText,
+                "elem": cells[idx],
+            }
+            return obj
+        }, {})
+    })
+}
+
 function getSelectedDate() {
     let selectedDateElem = getElementByXpath(`//select[@name="date"]/option[@selected]`, null)
     if (selectedDateElem == null) {
@@ -81,83 +96,33 @@ function getSelectedDate() {
     return urlParams.get('date')
 }
 
-// getHeaderIndexes returns a map with the header names that map to their indexes.
-function getHeaderIndexes() {
-    let headerIndexMap : { [key: string]: number } = {}
-    let headerElements = getElementsByXpath(`//table[@id="statTable0"]/thead/tr[2]/th`, null);
-    for (var idx = 0; idx < headerElements.length; idx++) {
-        let elem : Node | null = headerElements[idx]
-        if (elem == null ) {
-            continue
-        }
-        let elementTitle = (elem as HTMLElement).getAttribute("title")
-        if (elementTitle == null) {
-            continue
-        }
-        if (ATTRIBUTES_MAP.hasOwnProperty(elementTitle)) {
-            headerIndexMap[elementTitle] = idx
-        }
-    }
-    return headerIndexMap
-}
-
-function getPlayerData() {
-    let playerDataList = []
-    let playerCellElements = getElementsByXpath(`//table[@id="statTable0"]/tbody/tr/td//div[contains(@class, "ysf-player-name")]`, null);
-    for (var idx = 0; idx < playerCellElements.length; idx++) {
-        let elem : Node | null = playerCellElements[idx]
-        if (elem == null ) {
-            continue
-        }
-        let playerNameElem = getElementByXpath(`a[contains(@class, "name")]`, elem)
-        if (playerNameElem == null) {
-            continue
-        }
-        let playerName = (playerNameElem as HTMLElement).innerText
-        let playerTeamPosElem = getElementByXpath(`span[contains(text(), "-")]`, elem)
-        if (playerTeamPosElem == null) {
-            continue
-        }
-        let playerTeam = (playerTeamPosElem as HTMLElement).innerText.split("-")[0].trim()
-        // console.log(`${playerName}: ${playerTeam}`)
-        playerDataList.push({
-            playerName: playerName,
-            teamAbbreviation: playerTeam,
-        })
-    }
-    return playerDataList
-}
-
 async function updateStatCells() {
-    let headerIndexMap = getHeaderIndexes()
-    let playerDataList = getPlayerData()
+    let tableElem : any = document.querySelector("#statTable0")
+    let playerDataList = parseHTMLTableElem(tableElem)
     for (let playerRowIdx = 0; playerRowIdx < playerDataList.length; playerRowIdx++) {
-        let playerName = playerDataList[playerRowIdx]["playerName"]
-        let teamAbbreviation = playerDataList[playerRowIdx]["teamAbbreviation"]
-        let playerRowElem = getElementByXpath(`//table[@id="statTable0"]/tbody/tr[${playerRowIdx + 1}]`, null)
-        for (const [yahooStatName, colIndex] of Object.entries(headerIndexMap)) {
-            let statCellElem : any = getElementByXpath(`td[${colIndex+1}]/div`, playerRowElem)
-            // console.log(`${yahooStatName}: td[${colIndex+1}]/div`)
-            // console.log(statCellElem)
-            let statValue = (statCellElem as HTMLElement).innerText
+        let playerData = playerDataList[playerRowIdx]
+        if (!playerData.Status["innerText"].startsWith("W, ") && !playerData.Status["innerText"].startsWith("L, ")) {
+            // Skip games that have not ended.
+            continue
+        }
+        let playerName = (getElementByXpath(`.//a[contains(@class, "name")]`, playerData.Players["elem"]) as HTMLElement).innerText
+        // e.g. team Element = "MEM - PG,SG" -- after split & trim, "MEM"
+        let teamAbbreviation = (getElementByXpath(`.//span[contains(text(), " - ")]`, playerData.Players["elem"]) as HTMLElement).innerText.split("-")[0].trim()
+        for (let [yahooStatName, nbaAPIStatName] of Object.entries(ATTRIBUTES_MAP)) {
+            let statValue = playerData[yahooStatName]["innerText"]
+            let statCellElem : any = getElementByXpath(`div`, playerData[yahooStatName]["elem"])
             // Skip cells where there's no stat.
             if (statValue === "-" || statValue === "0" || statValue === "-/-") {
+                // console.log(`"Skipping ${playerName} ${yahooStatName}`)
                 continue
             }
-            // console.log(statValue)
             switch (yahooStatName) {
-                case "Field Goals Made/Field Goals Attempted":
-                case "Free Throws Made/Free Throws Attempted": // @ts-ignore
-                    let nbaAPIStatNames : any = ATTRIBUTES_MAP[yahooStatName]
-                    for (let statType in nbaAPIStatNames) {
-                        makeCellClickable(statCellElem, playerName, teamAbbreviation, statType, statValue, yahooStatName)
-                    }
+                case "FGM/A*":
+                case "FGT/A*": // @ts-ignore
+                    // TODO(henleyk): Support FGM/A and FTM/A. These require additional logic to parse and inject 2 links.
                     break
                 default:
-                    if (ATTRIBUTES_MAP.hasOwnProperty(yahooStatName)) {
-                        let statType : any = ATTRIBUTES_MAP[yahooStatName]
-                        makeCellClickable(statCellElem, playerName, teamAbbreviation, statType, statValue, yahooStatName)
-                    }
+                    makeCellClickable(statCellElem, playerName, teamAbbreviation, (nbaAPIStatName as string), statValue, yahooStatName)
             }
         }
     }
@@ -186,12 +151,18 @@ function makeCellClickable(element: Node, playerName: string, teamAbbreviation: 
 
     wrapper.addEventListener('click', async (e : any) => {
         // console.log(link);
+        // Clear previous data.
+        deleteVideoListInModal();
+        (document.querySelector("#php-video-player > source") as HTMLElement).setAttribute("src", "");
+        (document.querySelector("#loading-img") as HTMLElement).style.display = "inline"
+        // Show the modal with loading screen.
+        MicroModal.show('modal-1', MODAL_CONFIG);
         let videoResults : any[] = await getVideos(link)
-        updateModalDisplayData(playerName, teamAbbreviation, yahooStatName, statValue, videoResults)
+        updateModalDisplayData(playerName, teamAbbreviation, yahooStatName, statValue, videoResults);
+        (document.querySelector("#loading-img") as HTMLElement).style.display = "none"
         // set modal left and top location
         let offset = getOffset(e.target)
         let modalContainer = (document.getElementById("modal-1-container") as HTMLElement)
-        MicroModal.show('modal-1', MODAL_CONFIG);
         // click first video in the list to start trigger video playing.
         currentSelectedListElem.click()
         // adjust location of modal.
@@ -201,6 +172,7 @@ function makeCellClickable(element: Node, playerName: string, teamAbbreviation: 
 }
 
 function createModal() {
+    let loadingImgSrc = chrome.runtime.getURL("ball-triangle.svg")
     let modalHtml : string = `
 <div class="modal micromodal-slide" id="modal-1" aria-hidden="true">
 <div class="modal__overlay" tabindex="-1" data-micromodal-close>
@@ -210,6 +182,7 @@ function createModal() {
       <button class="modal__close" aria-label="Close modal" data-micromodal-close></button>
     </header>
     <main class="modal__content" id="modal-1-content">
+      <img id="loading-img" src="${loadingImgSrc}" />
       <ol class="list-group list-group-numbered" id="pbp-videos-list"></ol>
       <div id="php-video-container">
         <video
@@ -244,14 +217,7 @@ function createModal() {
     MicroModal.init(MODAL_CONFIG)
 }
 
-async function updateModalDisplayData(playerName: string, teamAbbreviation: string, yahooStatName: string, statValue: string, videoResults : any[]) {
-    // Update modal title to Player Name and the stat title.
-    let statTitle = statValue + " " + yahooStatName // e.g. 4 3-point Shots Made
-    let modalTitleElem : any = document.getElementById("modal-1-title")
-    modalTitleElem.innerText = playerName + " - " + statTitle
-    // Update Header to Show Player Photo.
-    // TODO(henleyk)
-    // Update Body to Show List of Videos Links.
+function deleteVideoListInModal() {
     let pbpVideosListElem = document.getElementById("pbp-videos-list")
     if (pbpVideosListElem == null) {
         console.log("couldn't find videos list element")
@@ -261,6 +227,18 @@ async function updateModalDisplayData(playerName: string, teamAbbreviation: stri
     while (pbpVideosListElem.firstChild) {
         pbpVideosListElem.removeChild(pbpVideosListElem.firstChild);
     }
+}
+
+async function updateModalDisplayData(playerName: string, teamAbbreviation: string, yahooStatName: string, statValue: string, videoResults : any[]) {
+    // Update modal title to Player Name and the stat title.
+    let statTitle = statValue + " " + yahooStatName // e.g. 4 3-point Shots Made
+    let modalTitleElem : any = document.getElementById("modal-1-title")
+    modalTitleElem.innerText = playerName + " - " + statTitle
+    // Update Header to Show Player Photo.
+    // TODO(henleyk)
+    // Update Body to Show List of Videos Links.
+    deleteVideoListInModal()
+    let pbpVideosListElem = (document.getElementById("pbp-videos-list") as HTMLElement)
     // Repopulate list items.
     for (let idx = 0; idx < videoResults.length; idx++) {
         let result = videoResults[idx]
