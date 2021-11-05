@@ -16,7 +16,7 @@ import (
 var nbaClient *connection.Client
 
 var notFound = ttlcache.ErrNotFound
-var cache ttlcache.SimpleCache
+var cache *ttlcache.Cache
 
 func init() {
 	nbaClient = connection.New(nil)
@@ -33,7 +33,8 @@ func setupCorsResponse(w *http.ResponseWriter, req *http.Request) {
 }
 
 func homePage(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, "Welcome to the HomePage!")
+	metrics := cache.GetMetrics()
+	fmt.Fprintf(w, fmt.Sprintf("H: %d, R: %d, M: %d", metrics.Hits, metrics.Retrievals, metrics.Misses))
 	fmt.Println("Endpoint Hit: homePage")
 }
 
