@@ -27,7 +27,8 @@ const ATTRIBUTES_MAP : { [key: string]: string } = {
     // "FGM/A*": ["FGM", "FGA"],
     // "FTM/A*": ["FTM", "FTA"],
     "FGM/A*": "FGA",
-    // "FTM/A*": "FTA",
+    // "FTM/A*": "FTA", // FT doesn't exist in nbaapi.
+    // "PTS": "FGM", // This could be confusing since PTS will be missing the FTM.
     "3PTM": "FG3M",
     "REB": "REB",
     "AST": "AST",
@@ -115,7 +116,7 @@ async function updateStatCells() {
             let statValue = playerData[yahooStatName]["innerText"]
             let statCellElem : any = getElementByXpath(`div`, playerData[yahooStatName]["elem"])
             // Skip cells where there's no stat.
-            if (statValue === "-" || statValue === "0" || statValue === "-/-") {
+            if (statValue === "-" || statValue === "0" || statValue === "-/-" || statValue === "0/0") {
                 // console.log(`"Skipping ${playerName} ${yahooStatName}`)
                 continue
             }
