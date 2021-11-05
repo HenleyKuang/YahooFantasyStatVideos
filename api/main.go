@@ -7,15 +7,23 @@ import (
 	"main/connection"
 	"main/service"
 	"net/http"
+	"time"
 
+	"github.com/ReneKroon/ttlcache/v2"
 	"github.com/gorilla/mux"
 )
 
 var nbaClient *connection.Client
 
+var notFound = ttlcache.ErrNotFound
+var cache ttlcache.SimpleCache
+
 func init() {
 	nbaClient = connection.New(nil)
 	defer nbaClient.Close()
+
+	cache = ttlcache.NewCache()
+	cache.SetTTL(time.Duration(3 * 24 * time.Hour)) // 3 Days TTL
 }
 
 func setupCorsResponse(w *http.ResponseWriter, req *http.Request) {
@@ -75,7 +83,19 @@ func playerVideos(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Invalid Request", "Request is invalid")
 		w.WriteHeader(400)
 	} else {
-		gameResults := service.GetVideos(nbaClient, playerName, teamAbbreviation, gameDate, statType)
+		key := fmt.Sprintf("%s:%s:%s:%s", playerName, teamAbbreviation, gameDate, statType)
+		var gameResults []*connection.PlayerVideoResult
+		if val, err := cache.Get(key); err != notFound {
+			fmt.Printf("[playervideos] CacheHit: %s\n", key)
+			json.Unmarshal(val.([]byte), &gameResults)
+		} else {
+			gameResults = service.GetVideos(nbaClient, playerName, teamAbbreviation, gameDate, statType)
+			if len(gameResults) > 0 {
+				// Sometimes, nbaapi lags and returns 0 results if game isn't over/just ended. Only cache results if more than 1 is returned.
+				b, _ := json.Marshal(gameResults)
+				cache.Set(key, b)
+			}
+		}
 		json.NewEncoder(w).Encode(gameResults)
 		w.WriteHeader(200)
 	}
