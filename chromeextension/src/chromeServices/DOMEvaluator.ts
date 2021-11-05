@@ -166,18 +166,16 @@ function makeCellClickable(element: Node, playerName: string, teamAbbreviation: 
         // adjust location of modal to left side of the stat clicked.
         let offset = getOffset(e.target)
         let modalContainer = (document.getElementById("modal-1-container") as HTMLElement)
-        modalContainer.style.left = (offset.left - modalContainer.offsetWidth - 30).toString() + "px"
-        modalContainer.style.top = (offset.top - modalContainer.offsetHeight/2).toString() + "px"
         // Show the modal with loading screen.
         MicroModal.show('modal-1', MODAL_CONFIG);
+        modalContainer.style.left = (offset.left - modalContainer.offsetWidth - 30).toString() + "px"
+        modalContainer.style.top = (offset.top - modalContainer.offsetHeight/2).toString() + "px"
         // Update modal data.
         let videoResults : any[] = await getVideos(link)
         updateModalDisplayData(playerName, teamAbbreviation, yahooStatName, statValue, videoResults);
         (document.querySelector("#loading-img") as HTMLElement).style.display = "none"
         // click first video in the list to start trigger video playing.
         currentSelectedListElem.click()
-        modalContainer.style.left = (offset.left - modalContainer.offsetWidth - 30).toString() + "px"
-        modalContainer.style.top = (offset.top - modalContainer.offsetHeight/2).toString() + "px"
     })
 }
 
