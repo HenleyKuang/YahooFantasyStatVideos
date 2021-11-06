@@ -102,6 +102,10 @@ function getSelectedDate() {
 
 async function updateStatCells() {
     let tableElem : any = document.querySelector("#statTable0")
+    if (tableElem == null) {
+        // can't find the team stats table.
+        return
+    }
     let playerDataList = parseHTMLTableElem(tableElem)
     for (let playerRowIdx = 0; playerRowIdx < playerDataList.length; playerRowIdx++) {
         let playerData = playerDataList[playerRowIdx]
