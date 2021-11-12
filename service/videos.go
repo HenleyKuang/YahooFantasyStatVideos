@@ -23,16 +23,22 @@ func init() {
 //  statType: "STL"
 func GetVideos(nbaClient *connection.Client, playerName string, teamAbbreviation string, date string, statType string) []*connection.PlayerVideoResult {
 	key := fmt.Sprintf("%s:%s", teamAbbreviation, playerName)
-	playerID := playerResults[key].PlayerID
-	teamID := playerResults[key].TeamID
-	var gameID string
+	if playerResult, ok := playerResults[key]; ok {
+		playerID := playerResult.PlayerID
+		teamID := playerResult.TeamID
+		var gameID string
 
-	gameResults, _ := nbaClient.GetGames(date)
-	for _, gameResult := range gameResults {
-		if gameResult.AwayTeamID == teamID || gameResult.HomeTeamID == teamID {
-			gameID = gameResult.GameID
+		gameResults, _ := nbaClient.GetGames(date)
+		for _, gameResult := range gameResults {
+			if gameResult.AwayTeamID == teamID || gameResult.HomeTeamID == teamID {
+				gameID = gameResult.GameID
+			}
 		}
+		videoResults, _ := nbaClient.GetPlayerVideos("2021-22", gameID, fmt.Sprint(teamID), fmt.Sprint(playerID), statType)
+		return videoResults
+	} else {
+		fmt.Printf("Key did not exist in playerResults index: %s\n", key)
 	}
-	videoResults, _ := nbaClient.GetPlayerVideos("2021-22", gameID, fmt.Sprint(teamID), fmt.Sprint(playerID), statType)
-	return videoResults
+
+	return nil
 }
