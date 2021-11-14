@@ -1,3 +1,8 @@
+/* Widget CSS */
+div.yui3-widget-ft {
+    height:300px;
+}
+
 /* Videos List CSS */
 .pbp-videos-list {
 overflow-y: auto;
@@ -11,6 +16,7 @@ overflow-x: hidden;
 
 .modal {
 font-family: -apple-system,BlinkMacSystemFont,avenir next,avenir,helvetica neue,helvetica,ubuntu,roboto,noto,segoe ui,arial,sans-serif;
+z-index: 99999;
 }
 
 .modal__overlay {
