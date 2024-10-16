@@ -54,7 +54,7 @@ func playerGameVideos(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Invalid Request", "Request is invalid")
 		w.WriteHeader(400)
 	} else {
-		playerVideoResults, _ := nbaClient.GetPlayerVideos("2021-22", gameID, teamID, playerID, statType)
+		playerVideoResults, _ := nbaClient.GetPlayerVideos("2024-25", gameID, teamID, playerID, statType)
 		json.NewEncoder(w).Encode(playerVideoResults)
 		w.WriteHeader(200)
 	}

@@ -13,9 +13,10 @@ import (
 )
 
 const (
-	scoreboardAPI   = "https://stats.nba.com/stats/scoreboardv3?"
-	playerIndexAPI  = "https://stats.nba.com/stats/leaguedashplayerstats?"
-	playerVideosAPI = "https://stats.nba.com/stats/videodetailsasset?"
+	scoreboardAPI     = "https://stats.nba.com/stats/scoreboardv3?"
+	playerIndexAPI    = "https://stats.nba.com/stats/leaguedashplayerstats?"
+	playerIndexAPI_V2 = "https://stats.nba.com/stats/playerindex?"
+	playerVideosAPI   = "https://stats.nba.com/stats/videodetailsasset?"
 )
 
 type playerIndexResultSet struct {
@@ -144,9 +145,7 @@ func New(httpClient *http.Client) *Client {
 	}
 }
 
-// GetPlayerIndex returns a list of all current nba players with metadata such as player name, player id, team name, team id, etc.
-// Parameter season expects an nba season represented as a string. e.g. "2021-22"
-func (c *Client) GetPlayerIndex(season string) (map[string]*PlayerIndexResult, error) {
+func buildPlayerIndexRequest(season string) (*http.Request, error) {
 	req, err := http.NewRequest("GET", playerIndexAPI, nil)
 
 	if err != nil {
@@ -177,7 +176,8 @@ func (c *Client) GetPlayerIndex(season string) (map[string]*PlayerIndexResult, e
 	params["Rank"] = "N"
 	params["Season"] = season // "2021-22"
 	params["SeasonSegment"] = ""
-	params["SeasonType"] = "Regular Season"
+	params["SeasonType"] = "Pre Season"
+	// params["SeasonType"] = "Regular Season"
 	params["StarterBench"] = ""
 	params["TeamID"] = "0"
 	params["TwoWay"] = "0"
@@ -187,6 +187,48 @@ func (c *Client) GetPlayerIndex(season string) (map[string]*PlayerIndexResult, e
 		q.Add(qName, qValue)
 	}
 	req.URL.RawQuery = q.Encode()
+	return req, nil
+}
+
+func buildPlayerIndexV2Request(season string) (*http.Request, error) {
+	/* This function wouldn't work because it's blocked by Access Origin nba.com */
+	req, err := http.NewRequest("GET", playerIndexAPI, nil)
+
+	if err != nil {
+		log.Printf("Errored creating NewRequest. err: %v\n", err)
+		return nil, err
+	}
+
+	q := req.URL.Query()
+	params := map[string]string{}
+	params["College"] = ""
+	params["Country"] = ""
+	params["DraftPick"] = ""
+	params["DraftRound"] = ""
+	params["DraftYear"] = ""
+	params["Height"] = ""
+	params["Historical"] = ""
+	params["LeagueID"] = "00"
+	params["Season"] = season // "2021-22"
+	params["SeasonType"] = "Pre Season"
+	// params["SeasonType"] = "Regular Season"
+	params["Weight"] = ""
+	for qName, qValue := range params {
+		q.Add(qName, qValue)
+	}
+	req.URL.RawQuery = q.Encode()
+	return req, nil
+}
+
+// GetPlayerIndex returns a list of all current nba players with metadata such as player name, player id, team name, team id, etc.
+// Parameter season expects an nba season represented as a string. e.g. "2021-22"
+func (c *Client) GetPlayerIndex(season string) (map[string]*PlayerIndexResult, error) {
+	req, err := buildPlayerIndexRequest(season)
+
+	if err != nil {
+		log.Print(err)
+		return nil, err
+	}
 	c.setRequestHeaders(&req.Header)
 
 	resp, err := c.httpClient.Do(req)
@@ -238,6 +280,10 @@ func (c *Client) GetPlayerIndex(season string) (map[string]*PlayerIndexResult, e
 }
 
 // GetPlayerVideos fetches for the videos for a particular player's stats.
+/*
+Test using:
+	curl "http://localhost:3000/playervideos?playerID=1628970&teamID=1610612766&gameID=0012400052&statType=AST"
+*/
 func (c *Client) GetPlayerVideos(season string, gameID string, teamID string, playerID string, statType string) ([]*PlayerVideoResult, error) {
 	req, err := http.NewRequest("GET", playerVideosAPI, nil)
 
@@ -370,13 +416,13 @@ func (c *Client) GetGames(date string) ([]*GameResult, error) {
 	resp, err := c.httpClient.Do(req)
 
 	if err != nil {
-		fmt.Printf("Errored when sending request to the server. err: %v\n", err)
+		fmt.Printf("[GetGames] Errored when sending request to the server. err: %v\n", err)
 		return nil, err
 	}
 
 	if resp.StatusCode != 200 {
 		err := fmt.Errorf("Status code is not 200 OK. It's %s", resp.Status)
-		fmt.Printf("Errored when sending request to the server. err: %v\n", err)
+		fmt.Printf("[GetGames] Errored when sending request to the server. err: %v\n", err)
 		return nil, err
 	}
 
@@ -384,7 +430,7 @@ func (c *Client) GetGames(date string) ([]*GameResult, error) {
 	responseData, err := ioutil.ReadAll(resp.Body)
 
 	if err != nil {
-		fmt.Printf("Errored when reading response body. err: %v\n", err)
+		fmt.Printf("[GetGames] Errored when reading response body. err: %v\n", err)
 		return nil, err
 	}
 
