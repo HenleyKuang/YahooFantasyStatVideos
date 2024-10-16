@@ -87,7 +87,7 @@ function parseHTMLTableElem(tableEl: HTMLElement, headerSelector: string, rowSel
     const columns = Array.from(tableEl.querySelectorAll(headerSelector)).map(it => it.textContent)
     const rows = tableEl.querySelectorAll(rowSelector)
     return Array.from(rows).map(row => {
-        const cells: any = Array.from(getElementsByXpath(`td[not(.//a[@title="Add to Watch List"])]`, row))
+        const cells: any = Array.from(getElementsByXpath(`td[not(.//a[contains(@title, "Watch List")])]`, row))
         return columns.reduce((obj: any, col: any, idx: any) => {
             obj[col] = {
                 "innerText": cells[idx].innerText,
