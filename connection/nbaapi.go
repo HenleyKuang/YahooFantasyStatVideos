@@ -115,12 +115,13 @@ type Client struct {
 func New(httpClient *http.Client) *Client {
 	useProxy := false
 	if httpClient == nil {
+		useProxySettings := os.Getenv("USE_PROXY")
 		proxyHost := os.Getenv("PROXY_HOST")
 		proxyPort := os.Getenv("PROXY_PORT")
 		c := &http.Client{
 			Timeout: time.Second * 10,
 		}
-		if proxyHost != "" && proxyPort != "" {
+		if useProxySettings == "TRUE" && proxyHost != "" && proxyPort != "" {
 			proxyUser := os.Getenv("PROXY_USER")
 			proxyPass := os.Getenv("PROXY_PASS")
 			fmt.Printf("Using proxy. %s:%s\n", proxyHost, proxyPort)
@@ -192,7 +193,7 @@ func buildPlayerIndexRequest(season string) (*http.Request, error) {
 
 func buildPlayerIndexV2Request(season string) (*http.Request, error) {
 	/* This function wouldn't work because it's blocked by Access Origin nba.com */
-	req, err := http.NewRequest("GET", playerIndexAPI, nil)
+	req, err := http.NewRequest("GET", playerIndexAPI_V2, nil)
 
 	if err != nil {
 		log.Printf("Errored creating NewRequest. err: %v\n", err)
@@ -280,15 +281,11 @@ func (c *Client) GetPlayerIndex(season string) (map[string]*PlayerIndexResult, e
 }
 
 // GetPlayerVideos fetches for the videos for a particular player's stats.
-/*
-Test using:
-	curl "http://localhost:3000/playervideos?playerID=1628970&teamID=1610612766&gameID=0012400052&statType=AST"
-*/
 func (c *Client) GetPlayerVideos(season string, gameID string, teamID string, playerID string, statType string) ([]*PlayerVideoResult, error) {
 	req, err := http.NewRequest("GET", playerVideosAPI, nil)
 
 	if err != nil {
-		log.Printf("Errored creating NewRequest. err: %v\n", err)
+		log.Printf("[GetPlayerVideos] Errored creating NewRequest. err: %v\n", err)
 		return nil, err
 	}
 	q := req.URL.Query()
@@ -317,6 +314,7 @@ func (c *Client) GetPlayerVideos(season string, gameID string, teamID string, pl
 	params["Location"] = ""
 	params["Month"] = "0"
 	params["OnOff"] = ""
+	params["OppPlayerID"] = ""
 	params["OpponentTeamID"] = "0"
 	params["Outcome"] = ""
 	params["PORound"] = "0"
@@ -334,7 +332,8 @@ func (c *Client) GetPlayerVideos(season string, gameID string, teamID string, pl
 	params["RookieYear"] = ""
 	params["Season"] = season // "2021-22"
 	params["SeasonSegment"] = ""
-	params["SeasonType"] = "Regular Season"
+	params["SeasonType"] = "Pre Season"
+	// params["SeasonType"] = "Regular Season"
 	params["ShotClockRange"] = ""
 	params["StartPeriod"] = "1"
 	params["StartRange"] = "0"
@@ -353,18 +352,19 @@ func (c *Client) GetPlayerVideos(season string, gameID string, teamID string, pl
 		q.Add(qName, qValue)
 	}
 	req.URL.RawQuery = q.Encode()
+	fmt.Println(req.URL.RawQuery)
 	c.setRequestHeaders(&req.Header)
 
 	resp, err := c.httpClient.Do(req)
 
 	if err != nil {
-		fmt.Printf("Errored when sending request to the server. err: %v\n", err)
+		fmt.Printf("[GetPlayerVideos] Errored when sending request to the server. err: %v\n", err)
 		return nil, err
 	}
 
 	if resp.StatusCode != 200 {
 		err := fmt.Errorf("Status code is not 200 OK. It's %s", resp.Status)
-		fmt.Printf("Errored when sending request to the server. err: %v\n", err)
+		fmt.Printf("[GetPlayerVideos] Errored when sending request to the server. err: %v\n", err)
 		return nil, err
 	}
 
@@ -372,7 +372,7 @@ func (c *Client) GetPlayerVideos(season string, gameID string, teamID string, pl
 	responseData, err := ioutil.ReadAll(resp.Body)
 
 	if err != nil {
-		fmt.Printf("Errored when reading response body. err: %v\n", err)
+		fmt.Printf("[GetPlayerVideos] Errored when reading response body. err: %v\n", err)
 		return nil, err
 	}
 
@@ -466,6 +466,7 @@ func (c *Client) setRequestAuthentication(header *http.Header) {
 }
 
 func (c *Client) setRequestHeaders(header *http.Header) {
+	// header.Set("sec-ch-ua", `Google Chrome";v="95", "Chromium";v="95", ";Not A Brand";v="99`)
 	header.Set("Accept", "application/json, text/plain, */*")
 	header.Set("x-nba-stats-token", "true")
 	// header.Set("sec-ch-ua-mobile", "?0")
@@ -478,6 +479,7 @@ func (c *Client) setRequestHeaders(header *http.Header) {
 	header.Set("Sec-Fetch-Dest", "empty")
 	header.Set("Referer", "https://www.nba.com/")
 	header.Set("Accept-Language", "en-US,en;q=0.9")
+
 	// header.Set("If-Modified-Since", "Thu, 28 Oct 2021 06:32:33 GMT")
 	// if c.useProxy {
 	// 	c.setRequestAuthentication(header)

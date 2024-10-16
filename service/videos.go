@@ -6,6 +6,7 @@ import (
 )
 
 var playerResults map[string]*connection.PlayerIndexResult
+var gamesResults map[string][]GameData
 
 const currentSeason = "2024-25"
 
@@ -15,6 +16,7 @@ func init() {
 	defer nbaClient.Close()
 
 	playerResults, _ = nbaClient.GetPlayerIndex(currentSeason)
+	fmt.Printf("Loaded players index. Total %d players data\n", len(playerResults))
 	// for k, v := range playerResults {
 	// 	fmt.Printf("k=%v; v=%v\n", k, v)
 	// }
@@ -26,6 +28,9 @@ func init() {
 	k=PHI:Andre Drummond; v=PHI:Andre Drummond
 	...
 	*/
+	// Cache list of game IDs (reading from JSON file).
+	gamesResults = GetAllGamesForSeason()
+	fmt.Printf("Loaded all games for the season. Total of %d games data\n", len(gamesResults))
 }
 
 // GetVideos returns a list of videos for a given player name, team abbreviation, date, and stat type.
@@ -43,13 +48,19 @@ func GetVideos(nbaClient *connection.Client, playerName string, teamAbbreviation
 		fmt.Printf("playerID: %v; teamID: %v\n", playerID, teamID)
 		var gameID string
 
-		gameResults, _ := nbaClient.GetGames(date)
+		// gameResults, _ := nbaClient.GetGames(date)
+		gameResults := gamesResults[date]
 		for _, gameResult := range gameResults {
-			if gameResult.AwayTeamID == teamID || gameResult.HomeTeamID == teamID {
+			if gameResult.AwayTeam.TeamID == teamID || gameResult.HomeTeam.TeamID == teamID {
 				gameID = gameResult.GameID
+				break
 			}
 		}
-		videoResults, _ := nbaClient.GetPlayerVideos(currentSeason, gameID, fmt.Sprint(teamID), fmt.Sprint(playerID), statType)
+		fmt.Printf("gameID: %v\n", gameID)
+		videoResults, err := nbaClient.GetPlayerVideos(currentSeason, gameID, fmt.Sprint(teamID), fmt.Sprint(playerID), statType)
+		if err != nil {
+			fmt.Println(err)
+		}
 		return videoResults
 	} else {
 		fmt.Printf("Key did not exist in playerResults index: %s\n", key)

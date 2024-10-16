@@ -39,7 +39,7 @@ func homePage(w http.ResponseWriter, r *http.Request) {
 }
 
 func playerIndex(w http.ResponseWriter, r *http.Request) {
-	playerResults, _ := nbaClient.GetPlayerIndex("2021-22")
+	playerResults, _ := nbaClient.GetPlayerIndex("2024-25")
 	json.NewEncoder(w).Encode(playerResults)
 	w.WriteHeader(200)
 	fmt.Println("Endpoint Hit: playerIndex")
@@ -91,6 +91,7 @@ func playerVideos(w http.ResponseWriter, r *http.Request) {
 			json.Unmarshal(val.([]byte), &gameResults)
 		} else {
 			gameResults = service.GetVideos(nbaClient, playerName, teamAbbreviation, gameDate, statType)
+			fmt.Printf("[playervidoes] gameResults: %v\n", gameResults)
 			if len(gameResults) > 0 {
 				// Sometimes, nbaapi lags and returns 0 results if game isn't over/just ended. Only cache results if more than 1 is returned.
 				b, _ := json.Marshal(gameResults)
