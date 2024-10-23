@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
+	"time"
 )
 
 type GamesScheduleResponse struct {
@@ -57,8 +58,15 @@ func GetAllGamesForSeason() map[string][]GameData {
 		// Keep the date part only and replace "/" to "-"
 		// (e.g. "10/04/2024 00:00:00" changes to "10-04-2024")
 		gameDate := strings.Replace(gameDateData.GameDate[:10], "/", "-", -1)
-		// fmt.Println(gameDate)
-		allGamesResponse[gameDate] = gameDateData.Games
+		t, err := time.Parse("01-02-2006", gameDate)
+		if err != nil {
+			panic(err)
+		}
+
+		// Format the date in YYYY-MM-DD format
+		formattedDate := t.Format("2006-01-02")
+		// fmt.Println(formattedDate)
+		allGamesResponse[formattedDate] = gameDateData.Games
 	}
 	return allGamesResponse
 }

@@ -1,8 +1,10 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"main/connection"
+	"os"
 )
 
 var playerResults map[string]*connection.PlayerIndexResult
@@ -17,6 +19,7 @@ func init() {
 
 	playerResults, _ = nbaClient.GetPlayerIndex(currentSeason)
 	fmt.Printf("Loaded players index. Total %d players data\n", len(playerResults))
+	savePlayerIndexToFile(playerResults)
 	// for k, v := range playerResults {
 	// 	fmt.Printf("k=%v; v=%v\n", k, v)
 	// }
@@ -45,12 +48,14 @@ func GetVideos(nbaClient *connection.Client, playerName string, teamAbbreviation
 	if playerResult, ok := playerResults[key]; ok {
 		playerID := playerResult.PlayerID
 		teamID := playerResult.TeamID
-		fmt.Printf("playerID: %v; teamID: %v\n", playerID, teamID)
+		fmt.Printf("playerID: %v; teamID: %v, gameDate: %v\n", playerID, teamID, date)
 		var gameID string
 
 		// gameResults, _ := nbaClient.GetGames(date)
+		// fmt.Printf("gamesResults: %v", gamesResults)
 		gameResults := gamesResults[date]
 		for _, gameResult := range gameResults {
+			// fmt.Printf("Cheking game: %v\n", gameResult)
 			if gameResult.AwayTeam.TeamID == teamID || gameResult.HomeTeam.TeamID == teamID {
 				gameID = gameResult.GameID
 				break
@@ -67,4 +72,21 @@ func GetVideos(nbaClient *connection.Client, playerName string, teamAbbreviation
 	}
 
 	return nil
+}
+
+func savePlayerIndexToFile(playerResults map[string]*connection.PlayerIndexResult) {
+	// Open the file for writing
+	file, err := os.Create("player_index.json")
+	if err != nil {
+		panic(err)
+	}
+	defer file.Close()
+
+	// Encode the data to JSON
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ") // Optional: Pretty-print JSON
+	err = encoder.Encode(playerResults)
+	if err != nil {
+		panic(err)
+	}
 }

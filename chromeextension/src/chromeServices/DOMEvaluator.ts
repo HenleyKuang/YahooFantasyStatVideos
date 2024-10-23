@@ -2,8 +2,8 @@
 // import './modules/bootstrap.bundle.js'
 import MicroModal from './modules/micromodal.min.js';
 
-const API_HOST = "https://yahoo-fantasy-bball-stat-video.herokuapp.com"
-const SELECTED_DATE: any = getSelectedDate()
+// const API_HOST = "https://yahoo-fantasy-bball-stat-video.herokuapp.com"
+const API_HOST = "http://localhost:3000"
 const MODAL_CONFIG = {
     // onShow: (modal : any) => console.info(`${modal.id} is shown`), // [1]
     onClose: () => {
@@ -18,6 +18,11 @@ const MODAL_CONFIG = {
     awaitCloseAnimation: false, // [9]
     debugMode: false // [10]
 }
+
+var SELECTED_DATE: any = getSelectedDate()
+var PAGE_TYPE: string = "";
+const PAGE_TYPE_YAHOO_FANTASY_TEAM_PAGE: string = "PAGE_TYPE_FANTASY_TEAM_PAGE";
+const PAGE_TYPE_YAHOO_BOX_SCORE: string = "PAGE_TYPE_YAHOO_BOX_SCORE";
 
 var currentSelectedListElem = document.createElement('li');;
 
@@ -37,6 +42,22 @@ const TEAM_PAGE_ATTRIBUTES_MAP: { [key: string]: string } = {
     "TO": "TOV",
 }
 
+// TEAM_PAGE_ATTRIBUTES_MAP key = Yahoo's Box Score Naming. Value = NBA's API Naming.
+// const TEAM_PAGE_ATTRIBUTES_MAP : { [key: string]: string | string[] } = {
+const BOX_SCORE_ATTRIBUTES_MAP: { [key: string]: string } = {
+    // "FGM/A*": ["FGM", "FGA"],
+    // "FTM/A*": ["FTM", "FTA"],
+    "FGM/A*": "FGA",
+    // "FTM/A*": "FTA", // FT doesn't exist in nbaapi.
+    // "PTS": "FGM", // This could be confusing since PTS will be missing the FTM.
+    "3PTM": "FG3M",
+    "REB": "REB",
+    "AST": "AST",
+    "STL": "STL",
+    "BLK": "BLK",
+    "TO": "TOV",
+}
+
 // WIDGET_ATTRIBUTES_MAP key = Yahoo's Naming. Value = NBA's API Naming.
 // const WIDGET_ATTRIBUTES_MAP : { [key: string]: string | string[] } = {
 const WIDGET_ATTRIBUTES_MAP: { [key: string]: string } = {
@@ -47,6 +68,11 @@ const WIDGET_ATTRIBUTES_MAP: { [key: string]: string } = {
     "ST": "STL",
     "BLK": "BLK",
     "TO": "TOV",
+}
+
+const RENAME_TEAM_ABBREV: { [key: string]: string } = {
+    "PHO": "PHX",
+    "NY": "NYK",
 }
 
 function getElementsByXpath(path: string, parent: Node | null) {
@@ -83,12 +109,24 @@ function createLink(playerName: string, teamAbbreviation: string, gameDate: stri
     return url.toString()
 }
 
-function parseHTMLTableElem(tableEl: HTMLElement, headerSelector: string, rowSelector: string) {
+function parseHTMLTableElem(tableEl: HTMLElement, headerSelector: string, rowElems: (Node | null)[]) {
     const columns = Array.from(tableEl.querySelectorAll(headerSelector)).map(it => it.textContent)
-    const rows = tableEl.querySelectorAll(rowSelector)
+    const rows = rowElems
+    // console.log(columns)
+    // console.log(rows)
     return Array.from(rows).map(row => {
-        const cells: any = Array.from(getElementsByXpath(`td[not(.//a[contains(@title, "Watch List")])]`, row))
+        const cells: any = Array.from(getElementsByXpath(`(th|td)[not(.//a[contains(@title, "Watch List")])]`, row))
+        // console.log(cells)
         return columns.reduce((obj: any, col: any, idx: any) => {
+            if (PAGE_TYPE == PAGE_TYPE_YAHOO_BOX_SCORE) {
+                // For yahoo box score page, rename some columns.
+                if (col.includes("Starters") || col.includes("Bench")) {
+                    col = "Players"
+                } else {
+                    // For yahoo box score page, we'll also capitalize the other columns which should be all stat names
+                    col = col.toUpperCase()
+                }
+            }
             obj[col] = {
                 "innerText": cells[idx].innerText,
                 "elem": cells[idx],
@@ -98,7 +136,15 @@ function parseHTMLTableElem(tableEl: HTMLElement, headerSelector: string, rowSel
     })
 }
 
-function getSelectedDate() {
+/* Converts 'Wed, Oct 16, 2024' to "2024-10-16" */
+function convertToISODate(givenDate: string) {
+    const date = new Date(givenDate);
+    const formattedDate = date.toISOString().slice(0, 10);
+    return formattedDate
+}
+
+async function getSelectedDate() {
+    /* Selected date from team page */
     let selectedDateElem = getElementByXpath(`//select[@name="date"]/option[@selected]`, null)
     if (selectedDateElem == null) {
         console.log("date element is null")
@@ -109,16 +155,35 @@ function getSelectedDate() {
         return ""
     }
     const urlParams = new URLSearchParams(valueURL)
-    return urlParams.get('date')
+    if (urlParams.get('date')) {
+        PAGE_TYPE = PAGE_TYPE_YAHOO_FANTASY_TEAM_PAGE
+        return urlParams.get('date')
+    }
+    return ""
 }
 
-async function updateStatCells() {
+async function getSelectedDateFromBoxScorePage() {
+    /* Selected date from Yahoo box score page */
+    let wordyDateElem = getElementByXpath('//div[@id="Col2-0-GameBlurb-Proxy"]//dd[contains(.//span, "Date")]//span[not(contains(text(), "Date"))]', null)
+    if (wordyDateElem == null) {
+        return ""
+    }
+    if (!(wordyDateElem as HTMLElement).innerText.includes(", ")) {
+        return ""
+    }
+    PAGE_TYPE = PAGE_TYPE_YAHOO_BOX_SCORE
+    return convertToISODate((wordyDateElem as HTMLElement).innerText) // innerText is for example 'Wed, Oct 16, 2024'
+}
+
+async function updateStatCellsForYahooFantasyTeamPage() {
+    console.log("Start updating stats cells for PAGE_TYPE_YAHOO_FANTASY_TEAM_PAGE")
     let tableElem: any = document.querySelector("#statTable0")
     if (tableElem == null) {
-        // can't find the team stats table.
+        console.log("[updateStatCellsForYahooFantasyTeamPage] can't find the team stats table.")
         return
     }
-    let playerDataList = parseHTMLTableElem(tableElem, 'tr.Alt.Last > th', 'tbody > tr')
+    const rowElems = tableElem.querySelectorAll('tbody > tr')
+    let playerDataList = parseHTMLTableElem(tableElem, 'tr.Alt.Last > th', rowElems)
     for (let playerRowIdx = 0; playerRowIdx < playerDataList.length; playerRowIdx++) {
         let playerData = playerDataList[playerRowIdx]
         if (!playerData.Status["innerText"].startsWith("W, ") && !playerData.Status["innerText"].startsWith("L, ")) {
@@ -126,8 +191,10 @@ async function updateStatCells() {
             continue
         }
         let playerName = (getElementByXpath(`.//a[contains(@class, "name")]`, playerData.Players["elem"]) as HTMLElement).innerText
+        // console.log(playerName)
         // e.g. team Element = "MEM - PG,SG" -- after split & trim, "MEM"
         let teamAbbreviation = (getElementByXpath(`.//span[contains(text(), " - ")]`, playerData.Players["elem"]) as HTMLElement).innerText.split("-")[0].trim()
+        // console.log(teamAbbreviation)
         for (let [yahooStatName, nbaAPIStatName] of Object.entries(TEAM_PAGE_ATTRIBUTES_MAP)) {
             let statValue = playerData[yahooStatName]["innerText"]
             let statCellElem: any = getElementByXpath(`div`, playerData[yahooStatName]["elem"])
@@ -142,7 +209,77 @@ async function updateStatCells() {
                 //     // TODO(henleyk): Support FGM/A and FTM/A. These require additional logic to parse and inject 2 links.
                 //     break
                 default:
+                    console.log("[updateStatCellsForYahooFantasyTeamPage] Making cell clickable: " + yahooStatName)
                     makeCellClickable(statCellElem, playerName, teamAbbreviation, (nbaAPIStatName as string), statValue, yahooStatName)
+            }
+        }
+    }
+}
+
+async function updateStatCellsForYahooBoxScores() {
+    console.log("Start updating stats cells for PAGE_TYPE_YAHOO_BOX_SCORE")
+    // Sometimes, there are 4 tables. Home Starters + Bench, Away Starters + Bench tables
+    let tableElems: NodeListOf<HTMLTableElement> | undefined = document.querySelector(".match-stats")?.querySelectorAll("table")
+    if (tableElems == undefined) {
+        console.log("[updateStatCellsForYahooBoxScores] can't find the team stats tables.")
+        return
+    }
+    if (tableElems.length > 4) {
+        console.log("[updateStatCellsForYahooBoxScores] more than 4 tables found.")
+        return
+    }
+    let teamNameElems: any = getElementsByXpath('//div[contains(@class, "linescore")]//tbody//td[./img]', null)
+    if (teamNameElems == null && teamNameElems.length >= 2) {
+        console.log("[updateStatCellsForYahooBoxScores] can't team names.")
+        return
+    }
+    let awayTeamAbbrev = (teamNameElems[0] as HTMLElement).innerText
+    if (RENAME_TEAM_ABBREV[awayTeamAbbrev] != null) {
+        awayTeamAbbrev = RENAME_TEAM_ABBREV[awayTeamAbbrev]
+    }
+    let homeTeamAbbrev = (teamNameElems[1] as HTMLElement).innerText
+    if (RENAME_TEAM_ABBREV[homeTeamAbbrev] != null) {
+        homeTeamAbbrev = RENAME_TEAM_ABBREV[homeTeamAbbrev]
+    }
+    // console.log(awayTeamAbbrev)
+    // console.log(homeTeamAbbrev)
+    let tableTeamNames = [awayTeamAbbrev, homeTeamAbbrev, awayTeamAbbrev, homeTeamAbbrev]
+    for (let tableElemIdx = 0; tableElemIdx < tableElems.length; tableElemIdx++) {
+        let tableElem = tableElems[tableElemIdx]
+        let rowElems = getElementsByXpath('.//tbody//tr[not(contains(.//th, "Totals"))]', tableElem)
+        // console.log(rowElems)
+        if (rowElems == null || rowElems.length == 0 || rowElems[0] == null) {
+            console.log("[updateStatCellsForYahooBoxScores] Couldn't find the table rows")
+            continue
+        }
+        let playerDataList = parseHTMLTableElem(tableElem, 'thead > tr > th', rowElems)
+        // console.log(playerDataList)
+        for (let playerRowIdx = 0; playerRowIdx < playerDataList.length; playerRowIdx++) {
+            let playerData = playerDataList[playerRowIdx]
+            // console.log(playerData)
+            let playerName = (getElementByXpath(`.//a[contains(@href, "/nba/players/")]`, playerData.Players["elem"]) as HTMLElement).innerText
+            // console.log(playerName)
+            let teamAbbreviation = tableTeamNames[tableElemIdx]
+            // console.log(teamAbbreviation)
+            for (let [yahooStatName, nbaAPIStatName] of Object.entries(BOX_SCORE_ATTRIBUTES_MAP)) {
+                if (playerData[yahooStatName] == null) {
+                    continue
+                }
+                let statValue = playerData[yahooStatName]["innerText"]
+                let statCellElem: any = playerData[yahooStatName]["elem"]
+                // Skip cells where there's no stat.
+                if (statValue === "-" || statValue === "0" || statValue === "-/-" || statValue === "0/0") {
+                    // console.log(`"Skipping ${playerName} ${yahooStatName}`)
+                    continue
+                }
+                switch (yahooStatName) {
+                    // case "FGM/A*":
+                    // case "FGT/A*": // @ts-ignore
+                    //     // TODO(henleyk): Support FGM/A and FTM/A. These require additional logic to parse and inject 2 links.
+                    //     break
+                    default:
+                        makeCellClickableV2(statCellElem, playerName, teamAbbreviation, (nbaAPIStatName as string), statValue, yahooStatName)
+                }
             }
         }
     }
@@ -167,7 +304,7 @@ function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-const MONTH_NAME_TO_NUM : any = {
+const MONTH_NAME_TO_NUM: any = {
     'Jan': '01',
     'Feb': '02',
     'Mar': '03',
@@ -182,13 +319,13 @@ const MONTH_NAME_TO_NUM : any = {
     'Dec': '12',
 }
 
-function n(n : number) {
-    return n > 9 ? "" + n: "0" + n;
+function n(n: number) {
+    return n > 9 ? "" + n : "0" + n;
 }
 
 // e.g. convert 'Nov 5' to 2021-11-05
-function formatWidgetDate(date : string) : string {
-    let [month_name, month_day] : any = date.split(" ")
+function formatWidgetDate(date: string): string {
+    let [month_name, month_day]: any = date.split(" ")
     let month_num = MONTH_NAME_TO_NUM[month_name]
     return `2021-${month_num}-${n(parseInt(month_day))}`
 }
@@ -220,7 +357,8 @@ async function updateNewsPopupStatCells(playerName: string, teamAbbreviation: st
         console.log("table.teamtable not found")
         return
     }
-    let playerDataList = parseHTMLTableElem(tableElem, 'tr > th', 'tbody > tr')
+    let rowElems = tableElem.querySelectorAll('tbody > tr')
+    let playerDataList = parseHTMLTableElem(tableElem, 'tr > th', rowElems)
     for (let playerRowIdx = 0; playerRowIdx < playerDataList.length; playerRowIdx++) {
         let playerData = playerDataList[playerRowIdx]
         console.log(playerData)
@@ -231,7 +369,7 @@ async function updateNewsPopupStatCells(playerName: string, teamAbbreviation: st
         for (let [yahooStatName, nbaAPIStatName] of Object.entries(WIDGET_ATTRIBUTES_MAP)) {
             let statValue = playerData[yahooStatName]["innerText"]
             let statCellElem: any = playerData[yahooStatName]["elem"]
-            let statDate : any = formatWidgetDate(playerData["Date"]["innerText"])
+            let statDate: any = formatWidgetDate(playerData["Date"]["innerText"])
             // Skip cells where there's no stat.
             if (statValue === "-" || statValue === "0" || statValue === "-/-" || statValue === "0/0" || statValue === "") {
                 // console.log(`"Skipping ${playerName} ${yahooStatName}`)
@@ -310,6 +448,43 @@ function makeCellClickable(element: Node, playerName: string, teamAbbreviation: 
     let link = createLink(playerName, teamAbbreviation, SELECTED_DATE, statType)
 
     wrapper.addEventListener('click', async (e: any) => {
+        console.log(link);
+        // Clear previous data.
+        deleteVideoListInModal();
+        (document.querySelector("#php-video-player > source") as HTMLElement).setAttribute("src", "");
+        (document.querySelector("#loading-img") as HTMLElement).style.display = "inline"
+        // adjust location of modal to left side of the stat clicked.
+        let offset = getOffset(e.target)
+        console.log(offset)
+        let modalContainer = (document.getElementById("modal-1-container") as HTMLElement)
+        // Show the modal with loading screen.
+        MicroModal.show('modal-1', MODAL_CONFIG);
+        modalContainer.style.left = (offset.left - modalContainer.offsetWidth - 30).toString() + "px"
+        modalContainer.style.top = (offset.top - modalContainer.offsetHeight / 2).toString() + "px"
+        // Update modal data.
+        let videoResults: any[] = await getVideos(link)
+        console.log(videoResults)
+        updateModalDisplayData(playerName, teamAbbreviation, yahooStatName, statValue, videoResults);
+        (document.querySelector("#loading-img") as HTMLElement).style.display = "none"
+        // click first video in the list to start trigger video playing.
+        currentSelectedListElem.click()
+    })
+}
+
+// makeCellClickableV2 for box score page
+function makeCellClickableV2(element: Node, playerName: string, teamAbbreviation: string, statType: string, statValue: string, yahooStatName: string) {
+    var wrapper = document.createElement('a');
+    wrapper.style.cursor = "pointer"
+    wrapper.style.color = "#0078FF"
+    wrapper.innerText = statValue;
+
+    // set element as child of wrapper
+    (element as HTMLElement).innerText = ""
+    element.appendChild(wrapper);
+
+    let link = createLink(playerName, teamAbbreviation, SELECTED_DATE, statType)
+
+    wrapper.addEventListener('click', async (e: any) => {
         // console.log(link);
         // Clear previous data.
         deleteVideoListInModal();
@@ -332,7 +507,7 @@ function makeCellClickable(element: Node, playerName: string, teamAbbreviation: 
     })
 }
 
-function createModal() {
+async function createModal() {
     let loadingImgSrc = chrome.runtime.getURL("ball-triangle.svg")
     let modalHtml: string = `
 <div class="modal micromodal-slide" id="modal-1" aria-hidden="true">
@@ -373,7 +548,9 @@ function createModal() {
     var div = document.createElement('div');
     div.innerHTML = modalHtml.trim();
     let modalElem = div.firstChild;
-    let outwrapperElem: any = document.getElementById("outer-wrapper")
+    // let outwrapperElem: any = document.getElementById("outer-wrapper")
+    // let outwrapperElem: any = document.getElementsByTagName("body")[0]
+    let outwrapperElem: any = document.documentElement;
     outwrapperElem.appendChild(modalElem)
     MicroModal.init(MODAL_CONFIG)
 }
@@ -400,8 +577,9 @@ async function updateModalDisplayData(playerName: string, teamAbbreviation: stri
     // Update Body to Show List of Videos Links.
     deleteVideoListInModal()
     let pbpVideosListElem = (document.getElementById("pbp-videos-list") as HTMLElement)
+    let allListElem: HTMLElement[] = new Array(videoResults.length);
     // Repopulate list items.
-    for (let idx = 0; idx < videoResults.length; idx++) {
+    for (let idx = videoResults.length - 1; idx >= 0; idx--) {
         let result = videoResults[idx]
         let description: string = result["description"]
         let videoURL: string = result["medium_url"]
@@ -449,19 +627,46 @@ data-setup="{}"
             let div = document.createElement('div');
             div.innerHTML = videoHtml.trim()
             let videoElem = div.firstChild
+            if (idx != videoResults.length - 1) {
+                console.log("Added listener")
+                videoElem?.addEventListener('ended', () => {
+                    allListElem[idx + 1].click()
+                }, false);
+            }
             let phpVideoContainerElem: any = document.getElementById("php-video-container")
             phpVideoContainerElem.appendChild(videoElem)
         })
-        pbpVideosListElem.appendChild(listElem)
+        pbpVideosListElem.insertBefore(listElem, pbpVideosListElem.firstChild)
+        allListElem[idx] = listElem
     }
 }
 
 try { init(); } catch (e) { console.error(e); }
 
 function init() {
-    createModal()
-    updateStatCells()
-    // injectPlayerNotesAction()
+    (async function getSelectedDateLoop() {
+        let selectedDate = await getSelectedDate();
+        if (selectedDate == "") {
+            selectedDate = await getSelectedDateFromBoxScorePage();
+        }
+        if (selectedDate == "") {
+            setTimeout(getSelectedDateLoop, 200);
+        } else {
+            SELECTED_DATE = selectedDate;
+            console.log("Selected date is: " + SELECTED_DATE)
+            console.log("PAGE_TYPE is " + PAGE_TYPE);
+            console.log("Start creating modal")
+            await createModal()
+            console.log("Created modal")
+            if (PAGE_TYPE == PAGE_TYPE_YAHOO_FANTASY_TEAM_PAGE) {
+                updateStatCellsForYahooFantasyTeamPage()
+            }
+            if (PAGE_TYPE == PAGE_TYPE_YAHOO_BOX_SCORE) {
+                updateStatCellsForYahooBoxScores()
+            }
+            // injectPlayerNotesAction()
+        }
+    })();
 }
 
 export { }

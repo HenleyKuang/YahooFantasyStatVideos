@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"main/util"
 	"net/http"
 	"net/url"
 	"os"
@@ -177,8 +178,8 @@ func buildPlayerIndexRequest(season string) (*http.Request, error) {
 	params["Rank"] = "N"
 	params["Season"] = season // "2021-22"
 	params["SeasonSegment"] = ""
-	params["SeasonType"] = "Pre Season"
-	// params["SeasonType"] = "Regular Season"
+	// params["SeasonType"] = "Pre Season"
+	params["SeasonType"] = "Regular Season"
 	params["StarterBench"] = ""
 	params["TeamID"] = "0"
 	params["TwoWay"] = "0"
@@ -211,8 +212,8 @@ func buildPlayerIndexV2Request(season string) (*http.Request, error) {
 	params["Historical"] = ""
 	params["LeagueID"] = "00"
 	params["Season"] = season // "2021-22"
-	params["SeasonType"] = "Pre Season"
-	// params["SeasonType"] = "Regular Season"
+	// params["SeasonType"] = "Pre Season"
+	params["SeasonType"] = "Regular Season"
 	params["Weight"] = ""
 	for qName, qValue := range params {
 		q.Add(qName, qValue)
@@ -267,6 +268,9 @@ func (c *Client) GetPlayerIndex(season string) (map[string]*PlayerIndexResult, e
 				newPlayerResult.PlayerID = int(value.(float64))
 			case "PLAYER_NAME":
 				newPlayerResult.PlayerName = value.(string)
+				if renamedName, ok := util.PLAYER_RENAMES_MAP[newPlayerResult.PlayerName]; ok {
+					newPlayerResult.PlayerName = renamedName
+				}
 			case "TEAM_ID":
 				newPlayerResult.TeamID = int(value.(float64))
 			case "TEAM_ABBREVIATION":
@@ -332,8 +336,8 @@ func (c *Client) GetPlayerVideos(season string, gameID string, teamID string, pl
 	params["RookieYear"] = ""
 	params["Season"] = season // "2021-22"
 	params["SeasonSegment"] = ""
-	params["SeasonType"] = "Pre Season"
-	// params["SeasonType"] = "Regular Season"
+	// params["SeasonType"] = "Pre Season"
+	params["SeasonType"] = "Regular Season"
 	params["ShotClockRange"] = ""
 	params["StartPeriod"] = "1"
 	params["StartRange"] = "0"
@@ -378,9 +382,11 @@ func (c *Client) GetPlayerVideos(season string, gameID string, teamID string, pl
 
 	var responseObject playerVideosResponse
 	json.Unmarshal(responseData, &responseObject)
+	fmt.Printf("[GetPlayerVidoes] Got %d videos\n", len(responseObject.PlayerIndexResultSets.Meta.VideoUrls))
 
 	results := []*PlayerVideoResult{}
 	for idx, videoURL := range responseObject.PlayerIndexResultSets.Meta.VideoUrls {
+		fmt.Printf("[GetPlayerVideos] Got videoURL struct: %v\n", videoURL)
 		videoResult := &PlayerVideoResult{
 			LargeVideoURL:  videoURL.LargeVideoURL,
 			MediumVideoURL: videoURL.MediumVideoURL,

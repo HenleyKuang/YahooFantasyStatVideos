@@ -1,0 +1,140 @@
+{
+  "BOS:Al Horford": {
+    "player_name": "Al Horford",
+    "player_id": 201143,
+    "team_abbrev": "BOS",
+    "team_id": 1610612738
+  },
+  "BOS:Derrick White": {
+    "player_name": "Derrick White",
+    "player_id": 1628401,
+    "team_abbrev": "BOS",
+    "team_id": 1610612738
+  },
+  "BOS:Jaylen Brown": {
+    "player_name": "Jaylen Brown",
+    "player_id": 1627759,
+    "team_abbrev": "BOS",
+    "team_id": 1610612738
+  },
+  "BOS:Jayson Tatum": {
+    "player_name": "Jayson Tatum",
+    "player_id": 1628369,
+    "team_abbrev": "BOS",
+    "team_id": 1610612738
+  },
+  "BOS:Jordan Walsh": {
+    "player_name": "Jordan Walsh",
+    "player_id": 1641775,
+    "team_abbrev": "BOS",
+    "team_id": 1610612738
+  },
+  "BOS:Jrue Holiday": {
+    "player_name": "Jrue Holiday",
+    "player_id": 201950,
+    "team_abbrev": "BOS",
+    "team_id": 1610612738
+  },
+  "BOS:Luke Kornet": {
+    "player_name": "Luke Kornet",
+    "player_id": 1628436,
+    "team_abbrev": "BOS",
+    "team_id": 1610612738
+  },
+  "BOS:Neemias Queta": {
+    "player_name": "Neemias Queta",
+    "player_id": 1629674,
+    "team_abbrev": "BOS",
+    "team_id": 1610612738
+  },
+  "BOS:Payton Pritchard": {
+    "player_name": "Payton Pritchard",
+    "player_id": 1630202,
+    "team_abbrev": "BOS",
+    "team_id": 1610612738
+  },
+  "BOS:Sam Hauser": {
+    "player_name": "Sam Hauser",
+    "player_id": 1630573,
+    "team_abbrev": "BOS",
+    "team_id": 1610612738
+  },
+  "BOS:Xavier Tillman": {
+    "player_name": "Xavier Tillman",
+    "player_id": 1630214,
+    "team_abbrev": "BOS",
+    "team_id": 1610612738
+  },
+  "NYK:Ariel Hukporti": {
+    "player_name": "Ariel Hukporti",
+    "player_id": 1630574,
+    "team_abbrev": "NYK",
+    "team_id": 1610612752
+  },
+  "NYK:Cameron Payne": {
+    "player_name": "Cameron Payne",
+    "player_id": 1626166,
+    "team_abbrev": "NYK",
+    "team_id": 1610612752
+  },
+  "NYK:Jacob Toppin": {
+    "player_name": "Jacob Toppin",
+    "player_id": 1631210,
+    "team_abbrev": "NYK",
+    "team_id": 1610612752
+  },
+  "NYK:Jalen Brunson": {
+    "player_name": "Jalen Brunson",
+    "player_id": 1628973,
+    "team_abbrev": "NYK",
+    "team_id": 1610612752
+  },
+  "NYK:Jericho Sims": {
+    "player_name": "Jericho Sims",
+    "player_id": 1630579,
+    "team_abbrev": "NYK",
+    "team_id": 1610612752
+  },
+  "NYK:Josh Hart": {
+    "player_name": "Josh Hart",
+    "player_id": 1628404,
+    "team_abbrev": "NYK",
+    "team_id": 1610612752
+  },
+  "NYK:Karl-Anthony Towns": {
+    "player_name": "Karl-Anthony Towns",
+    "player_id": 1626157,
+    "team_abbrev": "NYK",
+    "team_id": 1610612752
+  },
+  "NYK:Mikal Bridges": {
+    "player_name": "Mikal Bridges",
+    "player_id": 1628969,
+    "team_abbrev": "NYK",
+    "team_id": 1610612752
+  },
+  "NYK:Miles McBride": {
+    "player_name": "Miles McBride",
+    "player_id": 1630540,
+    "team_abbrev": "NYK",
+    "team_id": 1610612752
+  },
+  "NYK:OG Anunoby": {
+    "player_name": "OG Anunoby",
+    "player_id": 1628384,
+    "team_abbrev": "NYK",
+    "team_id": 1610612752
+  },
+  "NYK:Pacôme Dadiet": {
+    "player_name": "Pacôme Dadiet",
+    "player_id": 1642359,
+    "team_abbrev": "NYK",
+    "team_id": 1610612752
+  },
+  "NYK:Tyler Kolek": {
+    "player_name": "Tyler Kolek",
+    "player_id": 1642278,
+    "team_abbrev": "NYK",
+    "team_id": 1610612752
+  }
+}

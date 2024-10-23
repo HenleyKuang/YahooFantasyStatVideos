@@ -1,15 +1,22 @@
 {
     "name": "Fantasy Basketball Video Replays",
     "description": "Watch replays of every individual statistic right on your fantasy basketball pages.",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "manifest_version": 3,
     "content_scripts": [
         {
             "matches": [
-                "https://basketball.fantasysports.yahoo.com/nba/*"
+                "https://basketball.fantasysports.yahoo.com/*",
+                "https://sports.yahoo.com/nba/*"
             ],
-            "css": ["./static/css/bootstraplistgroup.css", "./static/css/modal.css", "./static/css/videojs.css"],
-            "js": ["./static/js/content.js"],
+            "css": [
+                "./static/css/bootstraplistgroup.css",
+                "./static/css/modal.css",
+                "./static/css/videojs.css"
+            ],
+            "js": [
+                "./static/js/content.js"
+            ],
             "run_at": "document_end",
             "all_frames": true
         }
@@ -18,7 +25,8 @@
         "extension_pages": "default-src 'self'; style-src 'self' data: 'unsafe-inline'; connect-src https://* data: blob: filesystem:;"
     },
     "permissions": [
-        "activeTab"
+        "activeTab",
+        "scripting"
     ],
     "action": {
         "default_popup": "index.html",
@@ -35,8 +43,15 @@
         "48": "play-button-48.png",
         "128": "play-button-128.png"
     },
-    "web_accessible_resources": [{
-        "resources": ["ball-triangle.svg"],
-        "matches": ["https://basketball.fantasysports.yahoo.com/*"]
-    }]
-  }
+    "web_accessible_resources": [
+        {
+            "resources": [
+                "ball-triangle.svg"
+            ],
+            "matches": [
+                "https://basketball.fantasysports.yahoo.com/*",
+                "https://sports.yahoo.com/*"
+            ]
+        }
+    ]
+}

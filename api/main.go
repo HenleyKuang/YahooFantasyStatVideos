@@ -91,7 +91,6 @@ func playerVideos(w http.ResponseWriter, r *http.Request) {
 			json.Unmarshal(val.([]byte), &gameResults)
 		} else {
 			gameResults = service.GetVideos(nbaClient, playerName, teamAbbreviation, gameDate, statType)
-			fmt.Printf("[playervidoes] gameResults: %v\n", gameResults)
 			if len(gameResults) > 0 {
 				// Sometimes, nbaapi lags and returns 0 results if game isn't over/just ended. Only cache results if more than 1 is returned.
 				b, _ := json.Marshal(gameResults)
